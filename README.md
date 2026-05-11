@@ -1,1 +1,5 @@
-# PHP1-Du-An1
+```php
+
+$LamBai = "Làm bài đàng hoàng nha, k tao bắn chết đó"
+
+```
