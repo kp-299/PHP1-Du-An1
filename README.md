@@ -29,3 +29,7 @@
 # Style code:
 
 # Info (Thông tin vai trò, chức năng và ứng dụng của từng Folder và File):
+
+# Tech stack:
+- PHP + Mysql
+- HTML + Tailwind/Bootstrap/Css + ApineJs/Jquery/Js
