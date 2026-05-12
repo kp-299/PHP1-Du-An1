@@ -1,10 +1,31 @@
-##1. Web phim sét
+# Mô hình MVC:
 
-```php
+![Ảnh mô hình MVC.](https://images.viblo.asia/beb9fe7b-f5c0-4cec-8c80-a82a2e8ce266.png "Ảnh mô hình MVC.")
 
-$LamBai = "Làm bài đàng hoàng nha, k tao bắn chết đó"
+# Cấu trúc thư mục:
+>
+|-- Ten_du_an
+    |-- assets
+        |-- fonts
+        |-- images
+        |-- javascripts
+        |-- css
+    |-- controllers
+        |-- BaseController.php
+    |-- models
+        |-- BaseModel.php        
+    |-- views
+        |-- components
+        |-- pages
+        |-- layouts
+            |-- app.php
+    |-- config
+        |-- connection.php
+    |-- index.php
+    |-- routes.php
+>
+# Flow:
 
-echo " thằng nào không làm cho nó cút ";
+# Style code:
 
-// cút cc
-```
+# Info (Thông tin vai trò, chức năng và ứng dụng của từng Folder và File):
