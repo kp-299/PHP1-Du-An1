@@ -3,7 +3,7 @@
 ![Ảnh mô hình MVC.](https://images.viblo.asia/beb9fe7b-f5c0-4cec-8c80-a82a2e8ce266.png "Ảnh mô hình MVC.")
 
 # Cấu trúc thư mục:
->
+```txt
 |-- Ten_du_an
     |-- assets
         |-- fonts
@@ -23,7 +23,7 @@
         |-- connection.php
     |-- index.php
     |-- routes.php
->
+```
 # Flow:
 
 # Style code:
