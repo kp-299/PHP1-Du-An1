@@ -87,4 +87,26 @@ Ten_du_an/
 
 ---
 
+## Schema:
+```txt
+- User:
+  -- id
+  -- name
+  -- email
+  -- password
+  -- money
+  -- token
+  -- createAt
+  -- updateAt
+  
+- Product
+  -- id
+  -- name
+  -- price
+  -- quantity
+  -- short_description 
+  -- full_description
+  -- id_user
+```
+
 **Made with ❤️**
