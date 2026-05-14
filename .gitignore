@@ -1,0 +1,19 @@
+# ENV
+.env
+
+# Node
+node_modules
+package-lock.json
+
+# Build files
+/public/css/style.css
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode
+
+# Logs
+*.log
