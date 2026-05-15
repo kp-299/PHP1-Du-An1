@@ -1,18 +1,35 @@
 <?php
-$controllers = array(
-  'pages' => ['home', 'error']
-); // Các controllers trong hệ thống và các action có thể gọi ra từ controller đó.
 
-// Nếu các tham số nhận được từ URL không hợp lệ (không thuộc list controller và action có thể gọi
-// thì trang báo lỗi sẽ được gọi ra.
-if (!array_key_exists($controller, $controllers) || !in_array($action, $controllers[$controller])) {
+$controllers = [
+  'pages' => ['home', 'cart', 'contact', 'product', 'productDetail', 'error'],
+];
+
+if (
+  !array_key_exists($controller, $controllers) ||
+  !in_array($action, $controllers[$controller])
+) {
   $controller = 'pages';
   $action = 'error';
 }
 
-// Nhúng file định nghĩa controller vào để có thể dùng được class định nghĩa trong file đó
-include_once('controllers/' . $controller . '_controller.php');
-// Tạo ra tên controller class từ các giá trị lấy được từ URL sau đó gọi ra để hiển thị trả về cho người dùng.
+$controllerFile = __DIR__ . '/controllers/' . $controller . '_controller.php';
+
+if (!file_exists($controllerFile)) {
+  die('Controller file not found: ' . $controllerFile);
+}
+
+require_once $controllerFile;
+
 $klass = str_replace('_', '', ucwords($controller, '_')) . 'Controller';
-$controller = new $klass;
-$controller->$action();
+
+if (!class_exists($klass)) {
+  die('Controller class not found: ' . $klass);
+}
+
+$controllerInstance = new $klass();
+
+if (!method_exists($controllerInstance, $action)) {
+  die('Action not found: ' . $action);
+}
+
+$controllerInstance->$action();

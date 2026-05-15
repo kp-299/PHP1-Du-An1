@@ -1,15 +1,11 @@
 <?php
-require_once('connection.php');
 
-if (isset($_GET['controller'])) {
-  $controller = $_GET['controller'];
-  if (isset($_GET['action'])) {
-    $action = $_GET['action'];
-  } else {
-    $action = 'index';
-  }
-} else {
-  $controller = 'pages';
-  $action = 'home';
-}
-require_once('routes.php');
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/config/connection.php';
+
+$controller = $_GET['controller'] ?? 'pages';
+$action = $_GET['action'] ?? 'home';
+
+require_once __DIR__ . '/routes.php';
