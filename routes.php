@@ -1,35 +1,50 @@
 <?php
 
-$controllers = [
-  'pages' => ['home', 'cart', 'contact', 'product', 'productDetail', 'error'],
+$routes = [
+    'pages' => [
+        'file' => __DIR__ . '/controllers/pages_controller.php',
+        'class' => 'PagesController',
+        'actions' => ['home', 'cart', 'contact', 'product', 'productDetail', 'error']
+    ],
+
+    'auth' => [
+        'file' => __DIR__ . '/controllers/auth_controller.php',
+        'class' => 'AuthController',
+        'actions' => ['login', 'register', 'logout']
+    ],
+
+    'admin' => [
+        'file' => __DIR__ . '/controllers/admin_controller.php',
+        'class' => 'AdminController',
+        'actions' => ['dashboard', 'products', 'orders', 'settings']
+    ],
 ];
 
-if (
-  !array_key_exists($controller, $controllers) ||
-  !in_array($action, $controllers[$controller])
-) {
-  $controller = 'pages';
-  $action = 'error';
+if (!isset($routes[$controller])) {
+    $controller = 'pages';
+    $action = 'error';
 }
 
-$controllerFile = __DIR__ . '/controllers/' . $controller . '_controller.php';
+$route = $routes[$controller];
 
-if (!file_exists($controllerFile)) {
-  die('Controller file not found: ' . $controllerFile);
+if (!in_array($action, $route['actions'])) {
+    $controller = 'pages';
+    $action = 'error';
+    $route = $routes[$controller];
 }
 
-require_once $controllerFile;
+require_once $route['file'];
 
-$klass = str_replace('_', '', ucwords($controller, '_')) . 'Controller';
+$className = $route['class'];
 
-if (!class_exists($klass)) {
-  die('Controller class not found: ' . $klass);
+if (!class_exists($className)) {
+    die('Controller class not found: ' . $className);
 }
 
-$controllerInstance = new $klass();
+$controllerObject = new $className();
 
-if (!method_exists($controllerInstance, $action)) {
-  die('Action not found: ' . $action);
+if (!method_exists($controllerObject, $action)) {
+    die('Action not found: ' . $action);
 }
 
-$controllerInstance->$action();
+$controllerObject->$action();
