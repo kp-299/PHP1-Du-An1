@@ -17,3 +17,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Uploads - Chỉ giữ file .gitkeep, không push file upload thật
+/uploads/*
+!/uploads/products/.gitkeep
+!/uploads/categories/.gitkeep
+!/uploads/settings/.gitkeep
+!/uploads/users/.gitkeep
+!/uploads/temp/.gitkeep

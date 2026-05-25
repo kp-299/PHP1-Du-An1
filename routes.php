@@ -1,4 +1,13 @@
 <?php
+/**
+ * FILE: routes.php
+ * CHỨC NĂNG: Định tuyến dựa trên area, controller, action
+ * 
+ * Biến có sẵn từ index.php:
+ *   $area       - 'client' hoặc 'admin'
+ *   $controller - tên controller (vd: 'pages', 'product', 'auth')
+ *   $action     - tên action (vd: 'home', 'index', 'login')
+ */
 
 $routes = [
     'pages' => [
