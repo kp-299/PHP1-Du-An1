@@ -1,4 +1,5 @@
 <?php
+
 /**
  * FILE: config/connection.php
  * CHỨC NĂNG: Kết nối database MySQL qua PDO
@@ -45,7 +46,7 @@
  *   Password hiện tại đã được thay bằng placeholder.
  *   Bạn cần điền lại password thật (từ hosting) trước khi chạy.
  */
-define('DB_HOST', 'localhost');
+define('DB_HOST', '103.57.223.36');
 define('DB_PORT', '3306');
 define('DB_NAME', 'bcalhqzjhosting_ban_trai_cay');
 define('DB_USER', 'bcalhqzjhosting_ban_trai_cay');
