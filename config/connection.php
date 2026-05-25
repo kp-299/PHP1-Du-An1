@@ -51,7 +51,7 @@ define('DB_NAME', 'bcalhqzjhosting_ban_trai_cay');
 define('DB_USER', 'bcalhqzjhosting_ban_trai_cay');
 // TODO: Điền password database thật tại đây (hoặc dùng .env)
 // Đây là placeholder, cần sửa trước khi chạy!
-define('DB_PASS', 'mật_khẩu_mới_sau_khi_đổi');
+define('DB_PASS', '7D]b2%&8`^w}+2U');
 
 // ==================== CLASS DB ====================
 
