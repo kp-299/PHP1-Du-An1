@@ -1,81 +1,149 @@
 <?php
-/**
- * FILE: controllers/client/UserController.php
- * CHỨC NĂNG: Xử lý thông tin cá nhân của user (dashboard user)
- * 
- * CLASS: ClientUserController
- * 
- * ROUTE MẪU:
- *   GET  index.php?area=client&controller=user&action=profile     -> xem thông tin
- *   POST index.php?area=client&controller=user&action=update      -> cập nhật thông tin
- *   POST index.php?area=client&controller=user&action=changePassword -> đổi mật khẩu
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/profile.php
- * 
- * YÊU CẦU: Tất cả action đều cần requireLogin()
- * 
- * CÁCH DÙNG:
- *   $userModel = new User();
- *   $user = $userModel->find($userId);
- *   $userModel->updateProfile($userId, $data);
- *   $userModel->updatePassword($userId, $newHash);
- */
 
 require_once __DIR__ . '/../BaseController.php';
+
+require_once __DIR__ . '/../../models/User.php';
+require_once __DIR__ . '/../../models/Order.php';
+require_once __DIR__ . '/../../models/WebSetting.php';
+
+require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/upload.php';
+require_once __DIR__ . '/../../helpers/log.php';
 
 class ClientUserController extends BaseController
 {
     protected $folder = 'pages';
 
-    /**
-     * Hiển thị thông tin cá nhân
-     * 
-     * Output: render views/pages/profile.php với:
-     *   - $title: string 'Thông tin cá nhân'
-     *   - $user: array thông tin user hiện tại (lấy từ DB)
-     * 
-     * Gợi ý: $user = (new User())->find(currentUserId());
-     */
     public function profile()
     {
-        // TODO: code tại đây
+        requireLogin();
+
+        $userModel = new User();
+        $orderModel = new Order();
+        $settingModel = new WebSetting();
+
+        $user = $userModel->find(currentUserId());
+        $orders = $orderModel->getByUserId(currentUserId());
+        $settings = $settingModel->getSimpleSettings();
+
+        $this->render('profile', [
+            'title' => 'Thông tin tài khoản',
+            'user' => $user,
+            'orders' => $orders,
+            'settings' => $settings,
+        ]);
     }
 
-    /**
-     * Cập nhật thông tin cá nhân (POST)
-     * 
-     * Input:  $_POST['name'], $_POST['phone'], $_POST['address']
-     * Output: redirect về profile + flash message
-     * 
-     * Các bước:
-     *   1. require POST
-     *   2. Lấy dữ liệu từ $_POST
-     *   3. Gọi (new User())->updateProfile($userId, $data)
-     *   4. setFlash success
-     *   5. redirect về profile
-     */
-    public function update()
+    public function editProfile()
     {
-        // TODO: code tại đây
+        requireLogin();
+
+        $userModel = new User();
+        $settingModel = new WebSetting();
+
+        $user = $userModel->find(currentUserId());
+        $settings = $settingModel->getSimpleSettings();
+
+        $this->render('editProfile', [
+            'title' => 'Cập nhật thông tin',
+            'user' => $user,
+            'settings' => $settings,
+        ]);
     }
 
-    /**
-     * Đổi mật khẩu (POST)
-     * 
-     * Input:  $_POST['current_password'], $_POST['new_password'], $_POST['confirm_password']
-     * Output: redirect về profile + flash
-     * 
-     * Các bước:
-     *   1. Lấy user từ DB (có password_hash)
-     *   2. Kiểm tra current_password (password_verify)
-     *   3. Kiểm tra new_password == confirm_password
-     *   4. Hash password mới
-     *   5. updatePassword
-     *   6. setFlash success
-     */
+    public function updateProfile()
+    {
+        requireLogin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=client&controller=user&action=editProfile');
+            exit;
+        }
+
+        $userModel = new User();
+
+        $oldUser = $userModel->find(currentUserId());
+
+        if (!$oldUser) {
+            header('Location: index.php?area=client&controller=pages&action=error');
+            exit;
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $address = trim($_POST['address'] ?? '');
+
+        if ($name === '') {
+            $this->render('editProfile', [
+                'title' => 'Cập nhật thông tin',
+                'user' => $oldUser,
+                'errors' => [
+                    'name' => 'Tên không được để trống',
+                ],
+            ]);
+            return;
+        }
+
+        $avatar = $oldUser['avatar'];
+
+        $newAvatar = uploadImage($_FILES['avatar'] ?? null, 'users');
+
+        if ($newAvatar) {
+            $avatar = $newAvatar;
+        }
+
+        $userModel->updateProfile(currentUserId(), [
+            'name' => $name,
+            'phone' => $phone,
+            'address' => $address,
+            'avatar' => $avatar,
+        ]);
+
+        $_SESSION['user']['name'] = $name;
+
+        createLog('update_profile');
+
+        header('Location: index.php?area=client&controller=user&action=profile');
+        exit;
+    }
+
     public function changePassword()
     {
-        // TODO: code tại đây
+        requireLogin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=client&controller=user&action=profile');
+            exit;
+        }
+
+        $oldPassword = $_POST['old_password'] ?? '';
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+
+        $userModel = new User();
+
+        $user = $userModel->find(currentUserId());
+
+        if (!$user || !password_verify($oldPassword, $user['password_hash'])) {
+            die('Mật khẩu cũ không đúng');
+        }
+
+        if (strlen($newPassword) < 6) {
+            die('Mật khẩu mới phải có ít nhất 6 ký tự');
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            die('Mật khẩu xác nhận không khớp');
+        }
+
+        $userModel->updatePassword(
+            currentUserId(),
+            password_hash($newPassword, PASSWORD_DEFAULT)
+        );
+
+        createLog('change_password');
+
+        header('Location: index.php?area=client&controller=user&action=profile');
+        exit;
     }
 }

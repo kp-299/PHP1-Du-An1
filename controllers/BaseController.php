@@ -28,4 +28,3 @@ class BaseController
         require __DIR__ . '/../views/layouts/app.php';
     }
 }
-}

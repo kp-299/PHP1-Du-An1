@@ -1,106 +1,158 @@
 <?php
-/**
- * FILE: controllers/client/AuthController.php
- * CHỨC NĂNG: Xử lý đăng ký, đăng nhập, đăng xuất cho Client
- * 
- * CLASS: ClientAuthController
- * 
- * ROUTE MẪU:
- *   GET  index.php?area=client&controller=auth&action=login    -> hiện form login
- *   POST index.php?area=client&controller=auth&action=handleLogin -> xử lý login
- *   GET  index.php?area=client&controller=auth&action=register -> hiện form register
- *   POST index.php?area=client&controller=auth&action=handleRegister -> xử lý register
- *   GET  index.php?area=client&controller=auth&action=logout   -> logout
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/login.php
- *   views/pages/register.php
- * 
- * LƯU ĐỒ XỬ LÝ LOGIN:
- *   handleLogin():
- *     1. Check method POST (isPost())
- *     2. Lấy email, password từ $_POST
- *     3. Validate (validateLogin)
- *     4. Tìm user theo email (User::findByEmail)
- *     5. Kiểm tra password (password_verify)
- *     6. Kiểm tra status != 'blocked'
- *     7. Lưu $_SESSION['user'] = [id, name, email, role]
- *     8. Ghi log 'login' (createLog)
- *     9. Nếu role admin -> redirect admin dashboard
- *        Nếu role user -> redirect client home
- * 
- * LƯU ĐỒ XỬ LÝ REGISTER:
- *   handleRegister():
- *     1. Check POST
- *     2. Validate (validateRegister)
- *     3. Kiểm tra email đã tồn tại chưa (User::findByEmail)
- *     4. password_hash($password, PASSWORD_DEFAULT)
- *     5. User::create([...])
- *     6. Ghi log 'register'
- *     7. setFlash success + redirect login
- */
 
 require_once __DIR__ . '/../BaseController.php';
+
+require_once __DIR__ . '/../../models/User.php';
+
+require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/log.php';
+require_once __DIR__ . '/../../helpers/validation.php';
 
 class ClientAuthController extends BaseController
 {
     protected $folder = 'pages';
 
-    /**
-     * Hiển thị form đăng nhập
-     * 
-     * Output: render views/pages/login.php
-     *   - $title: string 'Đăng nhập'
-     */
     public function login()
     {
-        // TODO: code tại đây
+        requireGuest();
+
+        $this->render('login', [
+            'title' => 'Đăng nhập',
+        ]);
     }
 
-    /**
-     * Hiển thị form đăng ký
-     * 
-     * Output: render views/pages/register.php
-     *   - $title: string 'Đăng ký'
-     */
     public function register()
     {
-        // TODO: code tại đây
+        requireGuest();
+
+        $this->render('register', [
+            'title' => 'Đăng ký',
+        ]);
     }
 
-    /**
-     * Xử lý đăng nhập (POST)
-     * 
-     * Input:  $_POST['email'], $_POST['password']
-     * Output: redirect đến trang phù hợp hoặc quay lại form login với lỗi
-     */
-    public function handleLogin()
-    {
-        // TODO: code tại đây
-    }
-
-    /**
-     * Xử lý đăng ký (POST)
-     * 
-     * Input:  $_POST['name'], $_POST['email'], $_POST['password'], $_POST['confirm_password']
-     * Output: redirect về login nếu thành công, quay lại form register nếu lỗi
-     */
     public function handleRegister()
     {
-        // TODO: code tại đây
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=client&controller=auth&action=register');
+            exit;
+        }
+
+        $errors = validateRegister($_POST);
+
+        if (!empty($errors)) {
+            $this->render('register', [
+                'title' => 'Đăng ký',
+                'errors' => $errors,
+                'old' => $_POST,
+            ]);
+            return;
+        }
+
+        $name = trim($_POST['name']);
+        $email = trim($_POST['email']);
+        $password = $_POST['password'];
+
+        $userModel = new User();
+
+        if ($userModel->findByEmail($email)) {
+            $this->render('register', [
+                'title' => 'Đăng ký',
+                'errors' => [
+                    'email' => 'Email đã tồn tại',
+                ],
+                'old' => $_POST,
+            ]);
+            return;
+        }
+
+        $userModel->create([
+            'name' => $name,
+            'email' => $email,
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'role' => 'user',
+            'status' => 'active',
+        ]);
+
+        createLog('register');
+
+        header('Location: index.php?area=client&controller=auth&action=login');
+        exit;
     }
 
-    /**
-     * Xử lý đăng xuất
-     * 
-     * Các bước:
-     *   1. createLog('logout')
-     *   2. unset($_SESSION['user'])
-     *   3. session_regenerate_id(true)
-     *   4. redirect về trang chủ
-     */
+    public function handleLogin()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=client&controller=auth&action=login');
+            exit;
+        }
+
+        $errors = validateLogin($_POST);
+
+        if (!empty($errors)) {
+            $this->render('login', [
+                'title' => 'Đăng nhập',
+                'errors' => $errors,
+                'old' => $_POST,
+            ]);
+            return;
+        }
+
+        $email = trim($_POST['email']);
+        $password = $_POST['password'];
+
+        $userModel = new User();
+
+        $user = $userModel->findByEmail($email);
+
+        if (!$user || !password_verify($password, $user['password_hash'])) {
+            $this->render('login', [
+                'title' => 'Đăng nhập',
+                'errors' => [
+                    'login' => 'Email hoặc mật khẩu không đúng',
+                ],
+                'old' => $_POST,
+            ]);
+            return;
+        }
+
+        if ($user['status'] === 'blocked') {
+            $this->render('login', [
+                'title' => 'Đăng nhập',
+                'errors' => [
+                    'login' => 'Tài khoản của bạn đã bị khóa',
+                ],
+                'old' => $_POST,
+            ]);
+            return;
+        }
+
+        $_SESSION['user'] = [
+            'id' => $user['id'],
+            'name' => $user['name'],
+            'email' => $user['email'],
+            'role' => $user['role'],
+        ];
+
+        createLog('login');
+
+        if ($user['role'] === 'admin') {
+            header('Location: index.php?area=admin&controller=dashboard&action=index');
+            exit;
+        }
+
+        header('Location: index.php?area=client&controller=pages&action=home');
+        exit;
+    }
+
     public function logout()
     {
-        // TODO: code tại đây
+        createLog('logout');
+
+        unset($_SESSION['user']);
+
+        session_regenerate_id(true);
+
+        header('Location: index.php?area=client&controller=pages&action=home');
+        exit;
     }
 }

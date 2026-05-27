@@ -1,89 +1,73 @@
 <?php
-/**
- * FILE: controllers/client/ProductController.php
- * CHỨC NĂNG: Xử lý danh sách sản phẩm và chi tiết sản phẩm cho Client
- * 
- * CLASS: ClientProductController
- * 
- * ROUTE MẪU:
- *   index.php?area=client&controller=product&action=index           -> danh sách SP
- *   index.php?area=client&controller=product&action=detail&slug=... -> chi tiết SP
- *   index.php?area=client&controller=product&action=search          -> tìm kiếm
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/product.php (danh sách)
- *   views/pages/productDetail.php (chi tiết)
- * 
- * CÁCH DÙNG:
- *   $products = (new Product())->getAll($filters);
- *   $product  = (new Product())->findBySlug($slug);
- */
 
 require_once __DIR__ . '/../BaseController.php';
+
+require_once __DIR__ . '/../../models/Product.php';
+require_once __DIR__ . '/../../models/Category.php';
+require_once __DIR__ . '/../../models/WebSetting.php';
 
 class ClientProductController extends BaseController
 {
     protected $folder = 'pages';
 
-    /**
-     * Danh sách sản phẩm (có filter, search, sort)
-     * 
-     * Input:  $_GET['keyword'], $_GET['category_id'], $_GET['sort']
-     * Output: render views/pages/product.php với:
-     *   - $title: string
-     *   - $products: array - danh sách sản phẩm
-     *   - $categories: array - danh mục active (để lọc)
-     *   - $keyword: string từ khóa tìm kiếm
-     *   - $categoryId: int|null ID danh mục đang lọc
-     *   - $sort: string kiểu sắp xếp
-     * 
-     * Các bước:
-     *   1. Lấy các tham số filter từ $_GET
-     *   2. Gọi Product::getAll($filters)
-     *   3. Gọi Category::getActive()
-     *   4. Render view
-     */
     public function index()
     {
-        // TODO: code tại đây
+        $productModel = new Product();
+        $categoryModel = new Category();
+        $settingModel = new WebSetting();
+
+        $keyword = trim($_GET['keyword'] ?? '');
+        $categoryId = $_GET['category_id'] ?? '';
+        $categorySlug = $_GET['category'] ?? '';
+        $sort = $_GET['sort'] ?? 'newest';
+
+        $products = $productModel->getAll([
+            'keyword' => $keyword,
+            'category_id' => $categoryId,
+            'category_slug' => $categorySlug,
+            'status' => 'active',
+            'sort' => $sort,
+        ]);
+
+        $categories = $categoryModel->getActive();
+        $settings = $settingModel->getSimpleSettings();
+
+        $this->render('product', [
+            'title' => 'Sản phẩm',
+            'products' => $products,
+            'categories' => $categories,
+            'settings' => $settings,
+            'keyword' => $keyword,
+            'categoryId' => $categoryId,
+            'categorySlug' => $categorySlug,
+            'sort' => $sort,
+        ]);
     }
 
-    /**
-     * Chi tiết sản phẩm
-     * 
-     * Input:  $_GET['slug']
-     * Output: render views/pages/productDetail.php với:
-     *   - $title: string tên sản phẩm
-     *   - $product: array chi tiết sản phẩm (kèm category)
-     * 
-     * Nếu không tìm thấy sản phẩm -> redirect về trang lỗi
-     */
     public function detail()
     {
-        // TODO: code tại đây
-    }
+        $slug = $_GET['slug'] ?? '';
 
-    /**
-     * Tìm kiếm sản phẩm (có thể redirect về index với keyword)
-     * 
-     * Input:  $_GET['keyword']
-     * Output: redirect đến product/index với keyword
-     * 
-     * Gợi ý: redirectClient('product', 'index', ['keyword' => $keyword])
-     */
-    public function search()
-    {
-        // TODO: code tại đây
-    }
+        if ($slug === '') {
+            header('Location: index.php?area=client&controller=pages&action=error');
+            exit;
+        }
 
-    /**
-     * Lọc sản phẩm theo danh mục
-     * 
-     * Input:  $_GET['category_id']
-     * Output: redirect đến product/index với category_id
-     */
-    public function category()
-    {
-        // TODO: code tại đây
+        $productModel = new Product();
+        $settingModel = new WebSetting();
+
+        $product = $productModel->findBySlug($slug);
+        $settings = $settingModel->getSimpleSettings();
+
+        if (!$product || $product['status'] !== 'active') {
+            header('Location: index.php?area=client&controller=pages&action=error');
+            exit;
+        }
+
+        $this->render('productDetail', [
+            'title' => $product['name'],
+            'product' => $product,
+            'settings' => $settings,
+        ]);
     }
 }
