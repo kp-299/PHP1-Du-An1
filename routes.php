@@ -93,31 +93,31 @@ $routes = [
         'category' => [
             'file' => __DIR__ . '/controllers/admin/CategoryController.php',
             'class' => 'AdminCategoryController',
-            'actions' => ['index', 'create', 'store', 'edit', 'update', 'hide']
+            'actions' => ['index', 'create', 'store', 'edit', 'update', 'hide', 'active', 'delete']
         ],
 
         'product' => [
             'file' => __DIR__ . '/controllers/admin/ProductController.php',
             'class' => 'AdminProductController',
-            'actions' => ['index', 'create', 'store', 'edit', 'update', 'hide', 'detail']
+            'actions' => ['index', 'create', 'store', 'edit', 'update', 'hide', 'active', 'outOfStock', 'detail']
         ],
 
         'order' => [
             'file' => __DIR__ . '/controllers/admin/OrderController.php',
             'class' => 'AdminOrderController',
-            'actions' => ['index', 'detail', 'updateStatus', 'cancel']
+            'actions' => ['index', 'detail', 'updateStatus', 'updatePaymentStatus', 'cancel']
         ],
 
         'user' => [
             'file' => __DIR__ . '/controllers/admin/UserController.php',
             'class' => 'AdminUserController',
-            'actions' => ['index', 'detail', 'updateStatus']
+            'actions' => ['index', 'detail', 'updateStatus', 'updateRole', 'lock', 'unlock']
         ],
 
         'log' => [
             'file' => __DIR__ . '/controllers/admin/LogController.php',
             'class' => 'AdminLogController',
-            'actions' => ['index']
+            'actions' => ['index', 'clear', 'clearOld']
         ],
 
         'setting' => [

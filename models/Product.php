@@ -1,17 +1,8 @@
 <?php
+
 /**
  * FILE: models/Product.php
  * CHỨC NĂNG: Model xử lý bảng products
- * 
- * BẢNG: products
- *   id, category_id, name, slug, description, price, sale_price,
- *   stock, unit, image, status (active/hidden/out_of_stock),
- *   created_at, updated_at
- * 
- * CÁCH DÙNG:
- *   $productModel = new Product();
- *   $products = $productModel->getActiveProducts();
- *   $latest = $productModel->getLatest(8);
  */
 
 require_once __DIR__ . '/BaseModel.php';
@@ -21,185 +12,336 @@ class Product extends BaseModel
     public function __construct()
     {
         parent::__construct();
-        // TODO: set tên bảng
-        // $this->table = 'products';
+
+        $this->table = 'products';
     }
 
-    /**
-     * Lấy danh sách sản phẩm (có filter, join category)
-     * 
-     * Input:
-     *   - $filters: array [
-     *       'keyword'     => string (tìm theo tên),
-     *       'category_id' => int (lọc theo danh mục),
-     *       'status'      => string,
-     *       'sort'        => string 'price_asc'|'price_desc'|'newest'|'oldest',
-     *       'limit'       => int,
-     *       'offset'      => int
-     *     ]
-     * 
-     * Output: array - mỗi product có thêm category_name, category_slug
-     * 
-     * SQL mẫu:
-     *   SELECT p.*, c.name AS category_name, c.slug AS category_slug
-     *   FROM products p
-     *   LEFT JOIN categories c ON p.category_id = c.id
-     *   WHERE 1=1
-     *   + điều kiện động
-     *   ORDER BY p.id DESC
-     *   LIMIT :limit OFFSET :offset
-     */
     public function getAll($filters = [])
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT 
+                p.*,
+                c.name AS category_name,
+                c.slug AS category_slug
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE 1 = 1
+        ";
+
+        $params = [];
+
+        if (!empty($filters['keyword'])) {
+            $sql .= " AND p.name LIKE :keyword";
+            $params['keyword'] = '%' . $filters['keyword'] . '%';
+        }
+
+        if (!empty($filters['category_id'])) {
+            $sql .= " AND p.category_id = :category_id";
+            $params['category_id'] = $filters['category_id'];
+        }
+
+        if (!empty($filters['category_slug'])) {
+            $sql .= " AND c.slug = :category_slug";
+            $params['category_slug'] = $filters['category_slug'];
+        }
+
+        if (!empty($filters['status'])) {
+            $sql .= " AND p.status = :status";
+            $params['status'] = $filters['status'];
+        }
+
+        $sort = $filters['sort'] ?? 'newest';
+
+        switch ($sort) {
+            case 'price_asc':
+                $sql .= " ORDER BY p.price ASC";
+                break;
+
+            case 'price_desc':
+                $sql .= " ORDER BY p.price DESC";
+                break;
+
+            case 'oldest':
+                $sql .= " ORDER BY p.id ASC";
+                break;
+
+            case 'newest':
+            default:
+                $sql .= " ORDER BY p.id DESC";
+                break;
+        }
+
+        if (isset($filters['limit'])) {
+            $sql .= " LIMIT :limit";
+
+            if (isset($filters['offset'])) {
+                $sql .= " OFFSET :offset";
+            }
+        }
+
+        $stmt = $this->db->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+
+        if (isset($filters['limit'])) {
+            $stmt->bindValue(':limit', (int) $filters['limit'], PDO::PARAM_INT);
+
+            if (isset($filters['offset'])) {
+                $stmt->bindValue(':offset', (int) $filters['offset'], PDO::PARAM_INT);
+            }
+        }
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
-    /**
-     * Lấy sản phẩm đang active (cho client)
-     * 
-     * Input:  (không tham số)
-     * Output: array - sản phẩm có status = 'active'
-     */
     public function getActiveProducts()
     {
-        // TODO: code tại đây
+        return $this->getAll([
+            'status' => 'active'
+        ]);
     }
 
-    /**
-     * Lấy sản phẩm mới nhất
-     * 
-     * Input:
-     *   - $limit: int (mặc định 8)
-     * 
-     * Output: array - $limit sản phẩm mới nhất (status = active)
-     * 
-     * SQL: SELECT ... FROM products WHERE status='active' ORDER BY created_at DESC LIMIT :limit
-     */
     public function getLatest($limit = 8)
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT 
+                p.*,
+                c.name AS category_name,
+                c.slug AS category_slug
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.status = 'active'
+            ORDER BY p.created_at DESC
+            LIMIT :limit
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
-    /**
-     * Tìm sản phẩm theo slug (kèm category)
-     * 
-     * Input:
-     *   - $slug: string
-     * 
-     * Output: array|false - có thêm category_name, category_slug
-     * 
-     * SQL: SELECT p.*, c.name AS category_name, c.slug AS category_slug
-     *      FROM products p
-     *      LEFT JOIN categories c ON p.category_id = c.id
-     *      WHERE p.slug = :slug LIMIT 1
-     */
     public function findBySlug($slug)
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT 
+                p.*,
+                c.name AS category_name,
+                c.slug AS category_slug
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.slug = :slug
+            LIMIT 1
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'slug' => $slug
+        ]);
+
+        return $stmt->fetch();
     }
 
-    /**
-     * Thêm sản phẩm mới
-     * 
-     * Input:
-     *   - $data: array ['category_id', 'name', 'slug', 'description',
-     *                    'price', 'sale_price', 'stock', 'unit', 'image', 'status']
-     * 
-     * Output: int|false
-     */
     public function create($data)
     {
-        // TODO: code tại đây
+        $sql = "
+            INSERT INTO products (
+                category_id,
+                name,
+                slug,
+                description,
+                price,
+                sale_price,
+                stock,
+                unit,
+                image,
+                status
+            )
+            VALUES (
+                :category_id,
+                :name,
+                :slug,
+                :description,
+                :price,
+                :sale_price,
+                :stock,
+                :unit,
+                :image,
+                :status
+            )
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $result = $stmt->execute([
+            'category_id' => $data['category_id'] ?? null,
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'description' => $data['description'] ?? null,
+            'price' => $data['price'],
+            'sale_price' => $data['sale_price'] ?? null,
+            'stock' => $data['stock'] ?? 0,
+            'unit' => $data['unit'] ?? 'kg',
+            'image' => $data['image'] ?? null,
+            'status' => $data['status'] ?? 'active',
+        ]);
+
+        if (!$result) {
+            return false;
+        }
+
+        return $this->db->lastInsertId();
     }
 
-    /**
-     * Cập nhật sản phẩm
-     * 
-     * Input:
-     *   - $id: int
-     *   - $data: array các trường cần update
-     * 
-     * Output: bool
-     */
     public function update($id, $data)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE products
+            SET
+                category_id = :category_id,
+                name = :name,
+                slug = :slug,
+                description = :description,
+                price = :price,
+                sale_price = :sale_price,
+                stock = :stock,
+                unit = :unit,
+                image = :image,
+                status = :status
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'category_id' => $data['category_id'] ?? null,
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'description' => $data['description'] ?? null,
+            'price' => $data['price'],
+            'sale_price' => $data['sale_price'] ?? null,
+            'stock' => $data['stock'] ?? 0,
+            'unit' => $data['unit'] ?? 'kg',
+            'image' => $data['image'] ?? null,
+            'status' => $data['status'] ?? 'active',
+        ]);
     }
 
-    /**
-     * Ẩn sản phẩm (status = 'hidden')
-     * 
-     * Input: $id: int
-     * Output: bool
-     */
     public function hide($id)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE products
+            SET status = 'hidden'
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id
+        ]);
     }
 
-    /**
-     * Đánh dấu hết hàng (status = 'out_of_stock')
-     * 
-     * Input: $id: int
-     * Output: bool
-     */
     public function markOutOfStock($id)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE products
+            SET status = 'out_of_stock'
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id
+        ]);
     }
 
-    /**
-     * Hiện sản phẩm (status = 'active')
-     * 
-     * Input: $id: int
-     * Output: bool
-     */
     public function active($id)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE products
+            SET status = 'active'
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id
+        ]);
     }
 
-    /**
-     * Giảm số lượng tồn kho
-     * 
-     * Input:
-     *   - $id: int
-     *   - $quantity: int - số lượng cần giảm
-     * 
-     * Output: bool
-     * 
-     * SQL: UPDATE products SET stock = stock - :quantity WHERE id = :id AND stock >= :quantity
-     * (Có thể check nếu stock <= 0 thì tự động markOutOfStock)
-     */
     public function decreaseStock($id, $quantity)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE products
+            SET stock = stock - :quantity
+            WHERE id = :id
+            AND stock >= :quantity
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $result = $stmt->execute([
+            'id' => $id,
+            'quantity' => $quantity
+        ]);
+
+        if (!$result) {
+            return false;
+        }
+
+        $product = $this->find($id);
+
+        if ($product && (int) $product['stock'] <= 0) {
+            $this->markOutOfStock($id);
+        }
+
+        return true;
     }
 
-    /**
-     * Tăng số lượng tồn kho (khi hủy đơn)
-     * 
-     * Input:
-     *   - $id: int
-     *   - $quantity: int
-     * 
-     * Output: bool
-     */
     public function increaseStock($id, $quantity)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE products
+            SET stock = stock + :quantity
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'quantity' => $quantity
+        ]);
     }
 
-    /**
-     * Đếm sản phẩm theo status
-     * 
-     * Input:
-     *   - $status: string 'active'|'hidden'|'out_of_stock'
-     * 
-     * Output: int
-     */
     public function countByStatus($status)
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM products
+            WHERE status = :status
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'status' => $status
+        ]);
+
+        $result = $stmt->fetch();
+
+        return (int) $result['total'];
     }
 }

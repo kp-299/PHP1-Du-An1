@@ -1,94 +1,59 @@
 <?php
-/**
- * FILE: controllers/admin/SettingController.php
- * CHỨC NĂNG: Quản lý cài đặt website (logo, banner, thông tin, ...)
- * 
- * CLASS: AdminSettingController
- * 
- * ROUTE MẪU:
- *   GET  index.php?area=admin&controller=setting&action=index      -> form cài đặt
- *   POST index.php?area=admin&controller=setting&action=update     -> lưu cài đặt
- *   POST index.php?area=admin&controller=setting&action=updateLogo -> cập nhật logo
- *   POST index.php?area=admin&controller=setting&action=updateBanner -> cập nhật banner
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/admin/setting_index.php
- * 
- * YÊU CẦU: requireAdmin()
- * 
- * CÁC SETTING MẪU:
- *   site_name       => text
- *   homepage_notice => text
- *   footer_content  => text
- *   primary_color   => color (mã hex)
- *   font_family     => text
- *   logo            => image (upload)
- *   banner          => image (upload)
- */
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/upload.php';
+require_once __DIR__ . '/../../helpers/log.php';
+
+require_once __DIR__ . '/../../models/WebSetting.php';
+
 class AdminSettingController extends BaseController
 {
-    protected $folder = 'pages/admin';
-
-    /**
-     * Trang cài đặt website
-     * 
-     * Output: render view với:
-     *   - $title: string 'Cài đặt website'
-     *   - $settings: array (dạng key=>value từ WebSetting::getSimpleSettings())
-     */
     public function index()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $settingModel = new WebSetting();
+
+        $settings = $settingModel->getSimpleSettings();
+
+        $this->renderAdmin('settings/index', [
+            'title' => 'Cài đặt website',
+            'settings' => $settings,
+        ]);
     }
 
-    /**
-     * Lưu cài đặt chung (POST)
-     * 
-     * Input:  $_POST['site_name'], $_POST['homepage_notice'],
-     *         $_POST['footer_content'], $_POST['primary_color'], $_POST['font_family']
-     * 
-     * Output: redirect về trang cài đặt
-     * 
-     * Gợi ý:
-     *   $settings = new WebSetting();
-     *   $settings->updateMany($_POST);
-     *   setFlash('success', 'Đã cập nhật cài đặt');
-     *   redirectAdmin('setting', 'index');
-     */
     public function update()
     {
-        // TODO: code tại đây
-    }
+        requireAdmin();
 
-    /**
-     * Cập nhật logo (POST)
-     * 
-     * Input:  $_FILES['logo']
-     * Output: redirect về trang cài đặt
-     * 
-     * Các bước:
-     *   1. Upload ảnh mới (uploadImage($_FILES['logo'], 'settings'))
-     *   2. Nếu upload thành công, xóa ảnh logo cũ (deleteImage)
-     *   3. WebSetting::updateSetting('logo', $newPath)
-     */
-    public function updateLogo()
-    {
-        // TODO: code tại đây
-    }
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=admin&controller=setting&action=index');
+            exit;
+        }
 
-    /**
-     * Cập nhật banner (POST)
-     * 
-     * Input:  $_FILES['banner']
-     * Output: redirect về trang cài đặt
-     * 
-     * Tương tự updateLogo
-     */
-    public function updateBanner()
-    {
-        // TODO: code tại đây
+        $settingModel = new WebSetting();
+
+        foreach ($_POST as $key => $value) {
+            $settingModel->createOrUpdate($key, $value);
+        }
+
+        $logo = uploadImage($_FILES['logo'] ?? null, 'settings');
+
+        if ($logo) {
+            $settingModel->createOrUpdate('logo', $logo, 'image');
+        }
+
+        $banner = uploadImage($_FILES['banner'] ?? null, 'settings');
+
+        if ($banner) {
+            $settingModel->createOrUpdate('banner', $banner, 'image');
+        }
+
+        createLog('update_settings');
+
+        header('Location: index.php?area=admin&controller=setting&action=index');
+        exit;
     }
 }

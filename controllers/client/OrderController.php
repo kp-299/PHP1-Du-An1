@@ -86,17 +86,9 @@ class ClientOrderController extends BaseController
             'status' => 'pending',
         ]);
 
-        foreach ($cartItems as $item) {
-            $orderItemModel->create([
-                'order_id' => $orderId,
-                'product_id' => $item['id'],
-                'product_name' => $item['name'],
-                'product_price' => $item['price'],
-                'quantity' => $item['quantity'],
-                'unit' => $item['unit'],
-                'subtotal' => $item['price'] * $item['quantity'],
-            ]);
+        $orderItemModel->createMany($orderId, $cartItems);
 
+        foreach ($cartItems as $item) {
             $productModel->decreaseStock($item['id'], $item['quantity']);
         }
 

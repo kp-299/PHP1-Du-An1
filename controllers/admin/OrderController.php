@@ -1,96 +1,116 @@
 <?php
-/**
- * FILE: controllers/admin/OrderController.php
- * CHỨC NĂNG: Quản lý đơn hàng cho Admin
- * 
- * CLASS: AdminOrderController
- * 
- * ROUTE MẪU:
- *   GET  index.php?area=admin&controller=order&action=index        -> danh sách đơn
- *   GET  index.php?area=admin&controller=order&action=detail&id=1 -> chi tiết đơn
- *   POST index.php?area=admin&controller=order&action=updateStatus -> cập nhật trạng thái
- *   POST index.php?area=admin&controller=order&action=updatePayment -> cập nhật thanh toán
- *   POST index.php?area=admin&controller=order&action=cancel       -> hủy đơn
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/admin/order_index.php
- *   views/pages/admin/order_detail.php
- * 
- * CÁC STATUS ĐƠN HÀNG:
- *   pending -> confirmed -> shipping -> completed
- *   pending -> cancelled
- * 
- * YÊU CẦU: requireAdmin()
- */
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/log.php';
+
+require_once __DIR__ . '/../../models/Order.php';
+require_once __DIR__ . '/../../models/OrderItem.php';
+
 class AdminOrderController extends BaseController
 {
-    protected $folder = 'pages/admin';
-
-    /**
-     * Danh sách đơn hàng (có lọc theo status, ngày, từ khóa)
-     * 
-     * Output: render view với:
-     *   - $title: string
-     *   - $orders: array (kèm user_name)
-     */
     public function index()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $orderModel = new Order();
+
+        $filters = [
+            'keyword' => trim($_GET['keyword'] ?? ''),
+            'status' => $_GET['status'] ?? '',
+            'date_from' => $_GET['date_from'] ?? '',
+            'date_to' => $_GET['date_to'] ?? '',
+        ];
+
+        $orders = $orderModel->getAllOrders($filters);
+
+        $this->renderAdmin('orders/index', [
+            'title' => 'Quản lý đơn hàng',
+            'orders' => $orders,
+            'filters' => $filters,
+        ]);
     }
 
-    /**
-     * Chi tiết đơn hàng
-     * 
-     * Input:  $_GET['id']
-     * Output: render view với:
-     *   - $title: string
-     *   - $order: array (kèm user)
-     *   - $orderItems: array
-     */
     public function detail()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        $orderModel = new Order();
+        $orderItemModel = new OrderItem();
+
+        $order = $orderModel->findWithUser($id);
+
+        if (!$order) {
+            header('Location: index.php?area=admin&controller=order&action=index');
+            exit;
+        }
+
+        $orderItems = $orderItemModel->getByOrderId($id);
+
+        $this->renderAdmin('orders/detail', [
+            'title' => 'Chi tiết đơn hàng',
+            'order' => $order,
+            'orderItems' => $orderItems,
+        ]);
     }
 
-    /**
-     * Cập nhật trạng thái đơn hàng (POST)
-     * 
-     * Input:  $_POST['order_id'], $_POST['status']
-     * Output: redirect về detail
-     * 
-     * Lưu ý: Nếu chuyển sang 'cancelled' thì cần tăng lại stock
-     *        (gọi Product::increaseStock cho từng item)
-     */
     public function updateStatus()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=admin&controller=order&action=index');
+            exit;
+        }
+
+        $id = $_POST['id'] ?? null;
+        $status = $_POST['status'] ?? 'pending';
+
+        $orderModel = new Order();
+        $orderModel->updateStatus($id, $status);
+
+        createLog('update_order_status');
+
+        header('Location: index.php?area=admin&controller=order&action=detail&id=' . $id);
+        exit;
     }
 
-    /**
-     * Cập nhật trạng thái thanh toán (POST)
-     * 
-     * Input:  $_POST['order_id'], $_POST['payment_status']
-     * Output: redirect về detail
-     */
-    public function updatePayment()
+    public function updatePaymentStatus()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=admin&controller=order&action=index');
+            exit;
+        }
+
+        $id = $_POST['id'] ?? null;
+        $paymentStatus = $_POST['payment_status'] ?? 'unpaid';
+
+        $orderModel = new Order();
+        $orderModel->updatePaymentStatus($id, $paymentStatus);
+
+        createLog('update_payment_status');
+
+        header('Location: index.php?area=admin&controller=order&action=detail&id=' . $id);
+        exit;
     }
 
-    /**
-     * Hủy đơn hàng (POST)
-     * 
-     * Input:  $_POST['order_id']
-     * Output: redirect về index
-     * 
-     * Gợi ý: Order::cancel($id)
-     *         Nếu hủy đơn pending thì tăng lại stock sản phẩm
-     */
     public function cancel()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        $orderModel = new Order();
+        $orderModel->cancel($id);
+
+        createLog('cancel_order_by_admin');
+
+        header('Location: index.php?area=admin&controller=order&action=index');
+        exit;
     }
 }

@@ -1,77 +1,139 @@
 <?php
-/**
- * FILE: controllers/admin/UserController.php
- * CHỨC NĂNG: Quản lý người dùng cho Admin
- * 
- * CLASS: AdminUserController
- * 
- * ROUTE MẪU:
- *   GET  index.php?area=admin&controller=user&action=index        -> danh sách user
- *   GET  index.php?area=admin&controller=user&action=detail&id=1  -> chi tiết user
- *   POST index.php?area=admin&controller=user&action=updateStatus -> khóa/mở user
- *   POST index.php?area=admin&controller=user&action=updateRole   -> đổi role
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/admin/user_index.php
- *   views/pages/admin/user_detail.php
- * 
- * YÊU CẦU: requireAdmin()
- */
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/log.php';
+
+require_once __DIR__ . '/../../models/User.php';
+
 class AdminUserController extends BaseController
 {
-    protected $folder = 'pages/admin';
-
-    /**
-     * Danh sách người dùng (có filter, search)
-     * 
-     * Output: render view với:
-     *   - $title: string 'Quản lý người dùng'
-     *   - $users: array
-     */
     public function index()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $userModel = new User();
+
+        $filters = [
+            'keyword' => trim($_GET['keyword'] ?? ''),
+            'role' => $_GET['role'] ?? '',
+            'status' => $_GET['status'] ?? '',
+        ];
+
+        $users = $userModel->getAllUsers($filters);
+
+        $this->renderAdmin('users/index', [
+            'title' => 'Quản lý người dùng',
+            'users' => $users,
+            'filters' => $filters,
+        ]);
     }
 
-    /**
-     * Chi tiết người dùng
-     * 
-     * Input:  $_GET['id']
-     * Output: render view với $user
-     */
     public function detail()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        $userModel = new User();
+        $user = $userModel->find($id);
+
+        if (!$user) {
+            header('Location: index.php?area=admin&controller=user&action=index');
+            exit;
+        }
+
+        $this->renderAdmin('users/detail', [
+            'title' => 'Chi tiết người dùng',
+            'user' => $user,
+        ]);
     }
 
-    /**
-     * Cập nhật trạng thái (active/blocked)
-     * 
-     * Input:  $_POST['user_id'], $_POST['status']
-     * Output: redirect về index
-     * 
-     * LƯU Ý: Không cho admin khóa chính mình
-     *   if ($userId == currentUserId()) {
-     *       setFlash('error', 'Không thể tự khóa chính mình');
-     *       redirectBack();
-     *   }
-     */
     public function updateStatus()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=admin&controller=user&action=index');
+            exit;
+        }
+
+        $id = $_POST['id'] ?? null;
+        $status = $_POST['status'] ?? 'active';
+
+        if ((int) $id === (int) currentUserId()) {
+            header('Location: index.php?area=admin&controller=user&action=index');
+            exit;
+        }
+
+        $userModel = new User();
+        $userModel->updateStatus($id, $status);
+
+        createLog('update_user_status');
+
+        header('Location: index.php?area=admin&controller=user&action=index');
+        exit;
     }
 
-    /**
-     * Cập nhật quyền (user/admin)
-     * 
-     * Input:  $_POST['user_id'], $_POST['role']
-     * Output: redirect về index
-     */
     public function updateRole()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=admin&controller=user&action=index');
+            exit;
+        }
+
+        $id = $_POST['id'] ?? null;
+        $role = $_POST['role'] ?? 'user';
+
+        if ((int) $id === (int) currentUserId()) {
+            header('Location: index.php?area=admin&controller=user&action=index');
+            exit;
+        }
+
+        $userModel = new User();
+        $userModel->updateRole($id, $role);
+
+        createLog('update_user_role');
+
+        header('Location: index.php?area=admin&controller=user&action=index');
+        exit;
+    }
+
+    public function lock()
+    {
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        if ((int) $id === (int) currentUserId()) {
+            header('Location: index.php?area=admin&controller=user&action=index');
+            exit;
+        }
+
+        $userModel = new User();
+        $userModel->updateStatus($id, 'blocked');
+
+        createLog('lock_user');
+
+        header('Location: index.php?area=admin&controller=user&action=index');
+        exit;
+    }
+
+    public function unlock()
+    {
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        $userModel = new User();
+        $userModel->updateStatus($id, 'active');
+
+        createLog('unlock_user');
+
+        header('Location: index.php?area=admin&controller=user&action=index');
+        exit;
     }
 }
