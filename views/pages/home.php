@@ -1,4 +1,3 @@
 <div>
     <?= $title ?>
-    <?= $message ?>
 </div>

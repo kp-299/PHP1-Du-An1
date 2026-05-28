@@ -1,208 +1,122 @@
 <?php
-/**
- * FILE: helpers/validation.php
- * CHỨC NĂNG: Validation dữ liệu đầu vào cho các form
- * 
- * PHỤ THUỘC: Không
- * 
- * CÁCH DÙNG:
- *   require_once __DIR__ . '/helpers/validation.php';
- *   $errors = validateRegister($_POST);
- *   if (!empty($errors)) { ... }
- * 
- * CÁC HÀM validate đều trả về:
- *   - Mảng rỗng [] nếu hợp lệ
- *   - Mảng ['field_name' => 'message lỗi'] nếu có lỗi
- */
 
-// ==================== HÀM CƠ BẢN ====================
-
-/**
- * Kiểm tra trường bắt buộc
- * 
- * Input:
- *   - $value: string - giá trị cần kiểm tra
- *   - $fieldName: string - tên trường (để ghi lỗi)
- * 
- * Output: string rỗng nếu OK, string lỗi nếu không
- * Gợi ý: if (empty(trim($value))) return "$fieldName không được để trống";
- */
-function required($value, $fieldName)
+function required($value)
 {
-    // TODO: code tại đây
+    return trim($value ?? '') !== '';
 }
 
-/**
- * Kiểm tra email hợp lệ
- * 
- * Input:
- *   - $email: string
- * 
- * Output: string rỗng nếu OK, string lỗi nếu không
- * Gợi ý: if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return 'Email không hợp lệ';
- */
 function isEmail($email)
 {
-    // TODO: code tại đây
+    return filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
-/**
- * Kiểm tra độ dài tối thiểu
- * 
- * Input:
- *   - $value: string
- *   - $min: int
- *   - $fieldName: string
- * 
- * Output: string rỗng nếu OK, string lỗi nếu không
- */
-function minLength($value, $min, $fieldName)
+function minLength($value, $length)
 {
-    // TODO: code tại đây
+    return strlen($value ?? '') >= $length;
 }
 
-/**
- * Kiểm tra độ dài tối đa
- * 
- * Input:
- *   - $value: string
- *   - $max: int
- *   - $fieldName: string
- * 
- * Output: string rỗng nếu OK, string lỗi nếu không
- */
-function maxLength($value, $max, $fieldName)
-{
-    // TODO: code tại đây
-}
-
-/**
- * Kiểm tra có phải số không
- * 
- * Input:
- *   - $value: mixed
- * 
- * Output: string rỗng nếu OK, string lỗi nếu không
- */
-function isNumber($value)
-{
-    // TODO: code tại đây
-}
-
-/**
- * Kiểm tra số dương
- * 
- * Input:
- *   - $value: mixed
- * 
- * Output: string rỗng nếu OK, string lỗi nếu không
- */
 function isPositiveNumber($value)
 {
-    // TODO: code tại đây
+    return is_numeric($value) && $value >= 0;
 }
 
-// ==================== HÀM VALIDATE FORM ====================
-
-/**
- * Validate form đăng ký
- * 
- * Input:
- *   - $data: array ['name', 'email', 'password', 'confirm_password']
- * 
- * Output: array ['field' => 'message lỗi', ...] hoặc [] nếu OK
- * 
- * Kiểm tra:
- *   - name: required, min 2, max 50
- *   - email: required, isEmail
- *   - password: required, min 6
- *   - confirm_password: required, phải match với password
- */
-function validateRegister($data)
-{
-    $errors = [];
-    // TODO: code kiểm tra từng field ở đây
-    // Ví dụ:
-    // $nameErr = required($data['name'] ?? '', 'Họ tên');
-    // if ($nameErr) $errors['name'] = $nameErr;
-    return $errors;
-}
-
-/**
- * Validate form đăng nhập
- * 
- * Input:
- *   - $data: array ['email', 'password']
- * 
- * Output: array ['field' => 'message lỗi', ...] hoặc [] nếu OK
- * 
- * Kiểm tra:
- *   - email: required
- *   - password: required
- */
 function validateLogin($data)
 {
     $errors = [];
-    // TODO: code tại đây
+
+    if (!required($data['email'] ?? '')) {
+        $errors['email'] = 'Email không được để trống';
+    }
+
+    if (!required($data['password'] ?? '')) {
+        $errors['password'] = 'Mật khẩu không được để trống';
+    }
+
     return $errors;
 }
 
-/**
- * Validate form sản phẩm (dùng cho admin)
- * 
- * Input:
- *   - $data: array ['category_id', 'name', 'price', 'stock', ...]
- * 
- * Output: array lỗi hoặc [] nếu OK
- * 
- * Kiểm tra:
- *   - category_id: required, isNumber
- *   - name: required, min 2, max 200
- *   - price: required, isPositiveNumber
- *   - stock: required, isNumber
- *   - unit: required
- */
-function validateProduct($data)
+function validateRegister($data)
 {
     $errors = [];
-    // TODO: code tại đây
+
+    if (!required($data['name'] ?? '')) {
+        $errors['name'] = 'Tên không được để trống';
+    }
+
+    if (!required($data['email'] ?? '')) {
+        $errors['email'] = 'Email không được để trống';
+    } elseif (!isEmail($data['email'])) {
+        $errors['email'] = 'Email không hợp lệ';
+    }
+
+    if (!required($data['password'] ?? '')) {
+        $errors['password'] = 'Mật khẩu không được để trống';
+    } elseif (!minLength($data['password'], 6)) {
+        $errors['password'] = 'Mật khẩu phải có ít nhất 6 ký tự';
+    }
+
+    if (($data['password'] ?? '') !== ($data['confirm_password'] ?? '')) {
+        $errors['confirm_password'] = 'Mật khẩu xác nhận không khớp';
+    }
+
     return $errors;
 }
 
-/**
- * Validate form danh mục (dùng cho admin)
- * 
- * Input:
- *   - $data: array ['name']
- * 
- * Output: array lỗi hoặc [] nếu OK
- * 
- * Kiểm tra:
- *   - name: required, min 2, max 100
- */
 function validateCategory($data)
 {
     $errors = [];
-    // TODO: code tại đây
+
+    if (!required($data['name'] ?? '')) {
+        $errors['name'] = 'Tên danh mục không được để trống';
+    }
+
     return $errors;
 }
 
-/**
- * Validate form thanh toán / đặt hàng
- * 
- * Input:
- *   - $data: array ['customer_name', 'customer_phone', 'customer_address']
- * 
- * Output: array lỗi hoặc [] nếu OK
- * 
- * Kiểm tra:
- *   - customer_name: required
- *   - customer_phone: required (có thể check số điện thoại)
- *   - customer_address: required
- */
+function validateProduct($data)
+{
+    $errors = [];
+
+    if (!required($data['name'] ?? '')) {
+        $errors['name'] = 'Tên sản phẩm không được để trống';
+    }
+
+    if (!required($data['price'] ?? '')) {
+        $errors['price'] = 'Giá sản phẩm không được để trống';
+    } elseif (!isPositiveNumber($data['price'])) {
+        $errors['price'] = 'Giá sản phẩm phải là số hợp lệ';
+    }
+
+    if (isset($data['sale_price']) && $data['sale_price'] !== '') {
+        if (!isPositiveNumber($data['sale_price'])) {
+            $errors['sale_price'] = 'Giá sale phải là số hợp lệ';
+        }
+    }
+
+    if (isset($data['stock']) && $data['stock'] !== '') {
+        if (!isPositiveNumber($data['stock'])) {
+            $errors['stock'] = 'Tồn kho phải là số hợp lệ';
+        }
+    }
+
+    return $errors;
+}
+
 function validateCheckout($data)
 {
     $errors = [];
-    // TODO: code tại đây
+
+    if (!required($data['customer_name'] ?? '')) {
+        $errors['customer_name'] = 'Tên khách hàng không được để trống';
+    }
+
+    if (!required($data['customer_phone'] ?? '')) {
+        $errors['customer_phone'] = 'Số điện thoại không được để trống';
+    }
+
+    if (!required($data['customer_address'] ?? '')) {
+        $errors['customer_address'] = 'Địa chỉ không được để trống';
+    }
+
     return $errors;
 }
