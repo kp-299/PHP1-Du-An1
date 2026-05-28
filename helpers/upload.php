@@ -60,3 +60,48 @@ function deleteImage($path)
 
     return false;
 }
+
+function uploadVideo($file, $folder = 'videos/files')
+{
+    if (empty($file) || empty($file['name'])) {
+        return null;
+    }
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+
+    $allowedTypes = [
+        'video/mp4',
+        'video/webm',
+        'video/ogg',
+        'video/quicktime',
+    ];
+
+    if (!in_array($file['type'], $allowedTypes)) {
+        return null;
+    }
+
+    $maxSize = 100 * 1024 * 1024; // 100MB
+
+    if ($file['size'] > $maxSize) {
+        return null;
+    }
+
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $fileName = time() . '_' . uniqid() . '.' . $extension;
+
+    $uploadDir = __DIR__ . '/../uploads/' . $folder . '/';
+
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    $targetPath = $uploadDir . $fileName;
+
+    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+        return null;
+    }
+
+    return 'uploads/' . $folder . '/' . $fileName;
+}

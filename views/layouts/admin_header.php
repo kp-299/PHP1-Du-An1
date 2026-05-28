@@ -13,6 +13,8 @@ $pageMap = [
     'product' => 'Sản phẩm',
     'order' => 'Đơn hàng',
     'user' => 'Người dùng',
+    'post' => 'Bài viết',
+    'video' => 'Video',
     'setting' => 'Cài đặt website',
     'log' => 'Logs',
 ];

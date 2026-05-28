@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-/* Ép toàn bộ form trong admin full width */
 .admin-page .form-control {
   width: 100%;
   display: block;
@@ -39,17 +38,14 @@
   resize: vertical;
 }
 
-/* Card admin nhìn đồng bộ */
 .admin-page .card {
   border-radius: 24px;
 }
 
-/* Fix file input */
 .admin-page input[type="file"] {
   width: 100%;
 }
 
-/* Fix color input */
 .admin-page input[type="color"] {
   width: 100%;
   min-height: 48px;

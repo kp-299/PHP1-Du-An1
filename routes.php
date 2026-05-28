@@ -29,24 +29,6 @@ $routes = [
             ]
         ],
 
-        'post' => [
-            'file' => __DIR__ . '/controllers/client/PostController.php',
-            'class' => 'ClientPostController',
-            'actions' => [
-                'index',
-                'detail'
-            ]
-        ],
-
-        'video' => [
-            'file' => __DIR__ . '/controllers/client/VideoController.php',
-            'class' => 'ClientVideoController',
-            'actions' => [
-                'index',
-                'detail'
-            ]
-        ],
-
         'cart' => [
             'file' => __DIR__ . '/controllers/client/CartController.php',
             'class' => 'ClientCartController',
@@ -112,6 +94,40 @@ $routes = [
             'file' => __DIR__ . '/controllers/admin/UserController.php',
             'class' => 'AdminUserController',
             'actions' => ['index', 'detail', 'updateStatus', 'updateRole', 'lock', 'unlock']
+        ],
+
+        'post' => [
+            'file' => __DIR__ . '/controllers/admin/PostController.php',
+            'class' => 'AdminPostController',
+            'actions' => [
+                'index',
+                'create',
+                'store',
+                'edit',
+                'update',
+                'detail',
+                'publish',
+                'hide',
+                'draft',
+                'delete',
+            ],
+        ],
+
+        'video' => [
+            'file' => __DIR__ . '/controllers/admin/VideoController.php',
+            'class' => 'AdminVideoController',
+            'actions' => [
+                'index',
+                'create',
+                'store',
+                'edit',
+                'update',
+                'detail',
+                'publish',
+                'hide',
+                'draft',
+                'delete',
+            ],
         ],
 
         'log' => [

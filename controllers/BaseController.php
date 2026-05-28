@@ -9,8 +9,7 @@ class BaseController
         $viewPath = __DIR__ . '/../views/' . $this->folder . '/' . $viewName . '.php';
 
         if (!file_exists($viewPath)) {
-            header('Location: index.php?area=client&controller=pages&action=error');
-            exit;
+            die('Client view not found: ' . $viewPath);
         }
 
         extract($data);
@@ -19,7 +18,6 @@ class BaseController
         require $viewPath;
         $content = ob_get_clean();
 
-        // Layout client của bạn đang nằm ở views/app.php
         require __DIR__ . '/../views/app.php';
     }
 
@@ -37,7 +35,6 @@ class BaseController
         require $viewPath;
         $content = ob_get_clean();
 
-        // Layout admin nằm ở views/layouts/admin.php
         require __DIR__ . '/../views/layouts/admin.php';
     }
 }
