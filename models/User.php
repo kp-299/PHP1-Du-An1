@@ -1,16 +1,8 @@
 <?php
+
 /**
  * FILE: models/User.php
- * CHỨC NĂNG: Model xử lý bảng users (user + admin)
- * 
- * BẢNG: users
- *   id, name, email, password_hash, phone, address,
- *   role (user/admin), avatar, status (active/blocked),
- *   created_at, updated_at
- * 
- * CÁCH DÙNG:
- *   $userModel = new User();
- *   $user = $userModel->findByEmail('test@gmail.com');
+ * CHỨC NĂNG: Model xử lý bảng users
  */
 
 require_once __DIR__ . '/BaseModel.php';
@@ -20,147 +12,231 @@ class User extends BaseModel
     public function __construct()
     {
         parent::__construct();
-        // TODO: set tên bảng
-        // $this->table = 'users';
+
+        $this->table = 'users';
     }
 
-    /**
-     * Tìm user theo email
-     * 
-     * Input:
-     *   - $email: string
-     * 
-     * Output: array|false - thông tin user hoặc false nếu không tìm thấy
-     * 
-     * SQL: SELECT * FROM users WHERE email = :email LIMIT 1
-     */
     public function findByEmail($email)
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT *
+            FROM users
+            WHERE email = :email
+            LIMIT 1
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'email' => $email
+        ]);
+
+        return $stmt->fetch();
     }
 
-    /**
-     * Tạo user mới
-     * 
-     * Input:
-     *   - $data: array [
-     *       'name'          => string,
-     *       'email'         => string,
-     *       'password_hash' => string (đã hash = password_hash()),
-     *       'phone'         => string (optional),
-     *       'address'       => string (optional),
-     *       'role'          => string (mặc định 'user'),
-     *       'status'        => string (mặc định 'active')
-     *     ]
-     * 
-     * Output: int|false - ID vừa insert hoặc false nếu lỗi
-     * 
-     * SQL: INSERT INTO users (...) VALUES (...)
-     * Gợi ý dùng: $this->db->lastInsertId() để lấy ID
-     */
     public function create($data)
     {
-        // TODO: code tại đây
+        $sql = "
+            INSERT INTO users (
+                name,
+                email,
+                password_hash,
+                phone,
+                address,
+                role,
+                avatar,
+                status
+            )
+            VALUES (
+                :name,
+                :email,
+                :password_hash,
+                :phone,
+                :address,
+                :role,
+                :avatar,
+                :status
+            )
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $result = $stmt->execute([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password_hash' => $data['password_hash'],
+            'phone' => $data['phone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'role' => $data['role'] ?? 'user',
+            'avatar' => $data['avatar'] ?? null,
+            'status' => $data['status'] ?? 'active',
+        ]);
+
+        if (!$result) {
+            return false;
+        }
+
+        return $this->db->lastInsertId();
     }
 
-    /**
-     * Cập nhật thông tin user (không bao gồm password)
-     * 
-     * Input:
-     *   - $id: int
-     *   - $data: array ['name', 'phone', 'address', ...]
-     * 
-     * Output: bool
-     * 
-     * SQL: UPDATE users SET name=:name, phone=:phone, ... WHERE id=:id
-     */
     public function updateProfile($id, $data)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE users
+            SET
+                name = :name,
+                phone = :phone,
+                address = :address,
+                avatar = :avatar
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'name' => $data['name'],
+            'phone' => $data['phone'] ?? null,
+            'address' => $data['address'] ?? null,
+            'avatar' => $data['avatar'] ?? null,
+        ]);
     }
 
-    /**
-     * Cập nhật mật khẩu
-     * 
-     * Input:
-     *   - $id: int
-     *   - $passwordHash: string - password_hash() mới
-     * 
-     * Output: bool
-     * 
-     * SQL: UPDATE users SET password_hash=:password_hash WHERE id=:id
-     */
     public function updatePassword($id, $passwordHash)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE users
+            SET password_hash = :password_hash
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'password_hash' => $passwordHash
+        ]);
     }
 
-    /**
-     * Lấy danh sách users (có filter)
-     * 
-     * Input:
-     *   - $filters: array [
-     *       'keyword' => string (optional - tìm theo name/email),
-     *       'role'    => string (optional - 'user'/'admin'),
-     *       'status'  => string (optional - 'active'/'blocked'),
-     *       'limit'   => int (optional),
-     *       'offset'  => int (optional)
-     *     ]
-     * 
-     * Output: array - danh sách users
-     * 
-     * SQL gợi ý: SELECT * FROM users WHERE 1=1 + các điều kiện động
-     *   Nếu có keyword: AND (name LIKE :keyword OR email LIKE :keyword)
-     *   Nếu có role: AND role = :role
-     *   ORDER BY id DESC
-     */
     public function getAllUsers($filters = [])
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT 
+                id,
+                name,
+                email,
+                phone,
+                address,
+                role,
+                avatar,
+                status,
+                created_at,
+                updated_at
+            FROM users
+            WHERE 1 = 1
+        ";
+
+        $params = [];
+
+        if (!empty($filters['keyword'])) {
+            $sql .= "
+                AND (
+                    name LIKE :keyword
+                    OR email LIKE :keyword
+                    OR phone LIKE :keyword
+                )
+            ";
+
+            $params['keyword'] = '%' . $filters['keyword'] . '%';
+        }
+
+        if (!empty($filters['role'])) {
+            $sql .= " AND role = :role";
+            $params['role'] = $filters['role'];
+        }
+
+        if (!empty($filters['status'])) {
+            $sql .= " AND status = :status";
+            $params['status'] = $filters['status'];
+        }
+
+        $sql .= " ORDER BY id DESC";
+
+        if (isset($filters['limit'])) {
+            $sql .= " LIMIT :limit";
+
+            if (isset($filters['offset'])) {
+                $sql .= " OFFSET :offset";
+            }
+        }
+
+        $stmt = $this->db->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+
+        if (isset($filters['limit'])) {
+            $stmt->bindValue(':limit', (int) $filters['limit'], PDO::PARAM_INT);
+
+            if (isset($filters['offset'])) {
+                $stmt->bindValue(':offset', (int) $filters['offset'], PDO::PARAM_INT);
+            }
+        }
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
-    /**
-     * Cập nhật trạng thái (active/blocked)
-     * 
-     * Input:
-     *   - $id: int
-     *   - $status: string 'active' hoặc 'blocked'
-     * 
-     * Output: bool
-     * 
-     * SQL: UPDATE users SET status=:status WHERE id=:id
-     */
     public function updateStatus($id, $status)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE users
+            SET status = :status
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'status' => $status
+        ]);
     }
 
-    /**
-     * Cập nhật role (user/admin)
-     * 
-     * Input:
-     *   - $id: int
-     *   - $role: string 'user' hoặc 'admin'
-     * 
-     * Output: bool
-     */
     public function updateRole($id, $role)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE users
+            SET role = :role
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'role' => $role
+        ]);
     }
 
-    /**
-     * Đếm số user theo role
-     * 
-     * Input:
-     *   - $role: string 'user' hoặc 'admin'
-     * 
-     * Output: int
-     * 
-     * SQL: SELECT COUNT(*) FROM users WHERE role = :role
-     */
     public function countByRole($role)
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM users
+            WHERE role = :role
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'role' => $role
+        ]);
+
+        $result = $stmt->fetch();
+
+        return (int) $result['total'];
     }
 }

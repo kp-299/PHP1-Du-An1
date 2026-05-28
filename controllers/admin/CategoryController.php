@@ -1,112 +1,212 @@
 <?php
-/**
- * FILE: controllers/admin/CategoryController.php
- * CHỨC NĂNG: CRUD danh mục (category) cho Admin
- * 
- * CLASS: AdminCategoryController
- * 
- * ROUTE MẪU:
- *   GET  index.php?area=admin&controller=category&action=index     -> danh sách
- *   GET  index.php?area=admin&controller=category&action=create    -> form thêm
- *   POST index.php?area=admin&controller=category&action=store     -> lưu thêm
- *   GET  index.php?area=admin&controller=category&action=edit&id=1 -> form sửa
- *   POST index.php?area=admin&controller=category&action=update    -> lưu sửa
- *   POST index.php?area=admin&controller=category&action=hide      -> ẩn
- *   POST index.php?area=admin&controller=category&action=active    -> hiện
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/admin/category_index.php
- *   views/pages/admin/category_form.php
- * 
- * YÊU CẦU: requireAdmin() cho tất cả action
- */
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/slug.php';
+require_once __DIR__ . '/../../helpers/upload.php';
+require_once __DIR__ . '/../../helpers/log.php';
+require_once __DIR__ . '/../../helpers/validation.php';
+
+require_once __DIR__ . '/../../models/Category.php';
+
 class AdminCategoryController extends BaseController
 {
-    protected $folder = 'pages/admin';
-
-    /**
-     * Danh sách danh mục
-     * 
-     * Output: render view với $categories: array
-     *   - $title: string 'Quản lý danh mục'
-     */
     public function index()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $categoryModel = new Category();
+
+        $filters = [
+            'keyword' => trim($_GET['keyword'] ?? ''),
+            'status' => $_GET['status'] ?? '',
+        ];
+
+        $categories = $categoryModel->getAll($filters);
+
+        $this->renderAdmin('categories/index', [
+            'title' => 'Quản lý danh mục',
+            'categories' => $categories,
+            'filters' => $filters,
+        ]);
     }
 
-    /**
-     * Hiển thị form thêm danh mục
-     * 
-     * Output: render view category_form.php với $category = null (form rỗng)
-     */
     public function create()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $this->renderAdmin('categories/create', [
+            'title' => 'Thêm danh mục',
+        ]);
     }
 
-    /**
-     * Lưu danh mục mới (POST)
-     * 
-     * Input:  $_POST['name'], $_POST['description'], $_POST['status']
-     * Output: redirect về index
-     * 
-     * Các bước:
-     *   1. Validate (validateCategory)
-     *   2. Tạo slug (createSlug)
-     *   3. Category::create(data)
-     *   4. Upload ảnh nếu có
-     *   5. setFlash + redirect
-     */
     public function store()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=admin&controller=category&action=create');
+            exit;
+        }
+
+        $errors = validateCategory($_POST);
+
+        if (!empty($errors)) {
+            $this->renderAdmin('categories/create', [
+                'title' => 'Thêm danh mục',
+                'errors' => $errors,
+                'old' => $_POST,
+            ]);
+            return;
+        }
+
+        $name = trim($_POST['name']);
+        $slug = createSlug($name);
+        $description = trim($_POST['description'] ?? '');
+        $status = $_POST['status'] ?? 'active';
+
+        $image = uploadImage($_FILES['image'] ?? null, 'categories');
+
+        $categoryModel = new Category();
+
+        $categoryModel->create([
+            'name' => $name,
+            'slug' => $slug,
+            'description' => $description,
+            'image' => $image,
+            'status' => $status,
+        ]);
+
+        createLog('create_category');
+
+        header('Location: index.php?area=admin&controller=category&action=index');
+        exit;
     }
 
-    /**
-     * Hiển thị form sửa danh mục
-     * 
-     * Input:  $_GET['id']
-     * Output: render view category_form.php với $category: array
-     */
     public function edit()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        $categoryModel = new Category();
+        $category = $categoryModel->find($id);
+
+        if (!$category) {
+            header('Location: index.php?area=admin&controller=category&action=index');
+            exit;
+        }
+
+        $this->renderAdmin('categories/edit', [
+            'title' => 'Sửa danh mục',
+            'category' => $category,
+        ]);
     }
 
-    /**
-     * Lưu cập nhật danh mục (POST)
-     * 
-     * Input:  $_POST['id'], $_POST['name'], ...
-     * Output: redirect về index
-     */
     public function update()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=admin&controller=category&action=index');
+            exit;
+        }
+
+        $id = $_POST['id'] ?? null;
+
+        $categoryModel = new Category();
+        $oldCategory = $categoryModel->find($id);
+
+        if (!$oldCategory) {
+            header('Location: index.php?area=admin&controller=category&action=index');
+            exit;
+        }
+
+        $errors = validateCategory($_POST);
+
+        if (!empty($errors)) {
+            $this->renderAdmin('categories/edit', [
+                'title' => 'Sửa danh mục',
+                'errors' => $errors,
+                'category' => array_merge($oldCategory, $_POST),
+            ]);
+            return;
+        }
+
+        $name = trim($_POST['name']);
+        $slug = createSlug($name);
+        $description = trim($_POST['description'] ?? '');
+        $status = $_POST['status'] ?? 'active';
+
+        $image = $oldCategory['image'];
+        $newImage = uploadImage($_FILES['image'] ?? null, 'categories');
+
+        if ($newImage) {
+            $image = $newImage;
+        }
+
+        $categoryModel->update($id, [
+            'name' => $name,
+            'slug' => $slug,
+            'description' => $description,
+            'image' => $image,
+            'status' => $status,
+        ]);
+
+        createLog('update_category');
+
+        header('Location: index.php?area=admin&controller=category&action=index');
+        exit;
     }
 
-    /**
-     * Ẩn danh mục (POST)
-     * 
-     * Input:  $_POST['id']
-     * Output: redirect về index
-     */
     public function hide()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        $categoryModel = new Category();
+        $categoryModel->hide($id);
+
+        createLog('hide_category');
+
+        header('Location: index.php?area=admin&controller=category&action=index');
+        exit;
     }
 
-    /**
-     * Hiện danh mục (POST)
-     * 
-     * Input:  $_POST['id']
-     * Output: redirect về index
-     */
     public function active()
     {
-        // TODO: code tại đây
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        $categoryModel = new Category();
+        $categoryModel->active($id);
+
+        createLog('active_category');
+
+        header('Location: index.php?area=admin&controller=category&action=index');
+        exit;
+    }
+
+    public function delete()
+    {
+        requireAdmin();
+
+        $id = $_GET['id'] ?? null;
+
+        $categoryModel = new Category();
+
+        if ($categoryModel->hasProducts($id)) {
+            $categoryModel->hide($id);
+        } else {
+            $categoryModel->deleteHard($id);
+        }
+
+        createLog('delete_category');
+
+        header('Location: index.php?area=admin&controller=category&action=index');
+        exit;
     }
 }

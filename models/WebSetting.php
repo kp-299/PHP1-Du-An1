@@ -1,25 +1,8 @@
 <?php
+
 /**
  * FILE: models/WebSetting.php
- * CHỨC NĂNG: Model xử lý bảng web_settings (cài đặt website động)
- * 
- * BẢNG: web_settings
- *   id, setting_key, setting_value, type (text/image/color), updated_at
- * 
- * CÁC SETTING MẪU:
- *   site_name       => 'Trái Cây Tươi'
- *   logo            => 'uploads/settings/logo.png'
- *   banner          => 'uploads/settings/banner.jpg'
- *   primary_color   => '#16a34a'
- *   font_family     => 'Inter, sans-serif'
- *   homepage_notice => 'Giảm giá 20%...'
- *   footer_content  => '© 2024 Trái Cây Tươi'
- * 
- * CÁCH DÙNG:
- *   $setting = new WebSetting();
- *   $siteName = $setting->getValue('site_name');
- *   $allSettings = $setting->getAllSettings();
- *   $setting->updateSetting('site_name', 'Trái Cây Tươi Siêu Sạch');
+ * CHỨC NĂNG: Model xử lý bảng web_settings
  */
 
 require_once __DIR__ . '/BaseModel.php';
@@ -29,109 +12,124 @@ class WebSetting extends BaseModel
     public function __construct()
     {
         parent::__construct();
-        // TODO: set tên bảng
-        // $this->table = 'web_settings';
+
+        $this->table = 'web_settings';
     }
 
-    /**
-     * Lấy tất cả settings dạng mảng key-value (dùng cho view)
-     * 
-     * Input:  (không tham số)
-     * Output: array - tất cả settings
-     * 
-     * Gợi ý:
-     *   $stmt = $this->db->query("SELECT * FROM {$this->table}");
-     *   return $stmt->fetchAll();
-     */
     public function getAllSettings()
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT *
+            FROM web_settings
+            ORDER BY id ASC
+        ";
+
+        $stmt = $this->db->query($sql);
+
+        return $stmt->fetchAll();
     }
 
-    /**
-     * Lấy settings dạng key => value (dễ dùng trong view)
-     * 
-     * Input:  (không tham số)
-     * Output: array ['site_name' => 'Trái Cây Tươi', 'logo' => '...', ...]
-     * 
-     * Gợi ý:
-     *   $settings = $this->getAllSettings();
-     *   $result = [];
-     *   foreach ($settings as $s) {
-     *       $result[$s['setting_key']] = $s['setting_value'];
-     *   }
-     *   return $result;
-     */
     public function getSimpleSettings()
     {
-        // TODO: code tại đây
+        $settings = $this->getAllSettings();
+
+        $result = [];
+
+        foreach ($settings as $setting) {
+            $result[$setting['setting_key']] = $setting['setting_value'];
+        }
+
+        return $result;
     }
 
-    /**
-     * Lấy giá trị của một setting
-     * 
-     * Input:
-     *   - $key: string - tên setting
-     * 
-     * Output: string|null - giá trị hoặc null nếu không tồn tại
-     * 
-     * SQL: SELECT setting_value FROM web_settings WHERE setting_key = :key LIMIT 1
-     */
     public function getValue($key)
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT setting_value
+            FROM web_settings
+            WHERE setting_key = :setting_key
+            LIMIT 1
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'setting_key' => $key
+        ]);
+
+        $result = $stmt->fetch();
+
+        if (!$result) {
+            return null;
+        }
+
+        return $result['setting_value'];
     }
 
-    /**
-     * Cập nhật giá trị setting
-     * 
-     * Input:
-     *   - $key: string
-     *   - $value: string
-     * 
-     * Output: bool
-     * 
-     * SQL: UPDATE web_settings SET setting_value = :value, updated_at = NOW()
-     *      WHERE setting_key = :key
-     */
     public function updateSetting($key, $value)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE web_settings
+            SET 
+                setting_value = :setting_value,
+                updated_at = NOW()
+            WHERE setting_key = :setting_key
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'setting_key' => $key,
+            'setting_value' => $value
+        ]);
     }
 
-    /**
-     * Tạo mới hoặc cập nhật setting (upsert)
-     * 
-     * Input:
-     *   - $key: string
-     *   - $value: string
-     *   - $type: string (mặc định 'text')
-     * 
-     * Output: bool
-     * 
-     * Các bước:
-     *   1. Kiểm tra setting đã tồn tại chưa (getValue)
-     *   2. Nếu có: gọi updateSetting
-     *   3. Nếu chưa: INSERT INTO web_settings (setting_key, setting_value, type)
-     *      VALUES (:key, :value, :type)
-     */
     public function createOrUpdate($key, $value, $type = 'text')
     {
-        // TODO: code tại đây
+        $currentValue = $this->getValue($key);
+
+        if ($currentValue !== null) {
+            return $this->updateSetting($key, $value);
+        }
+
+        $sql = "
+            INSERT INTO web_settings (
+                setting_key,
+                setting_value,
+                type
+            )
+            VALUES (
+                :setting_key,
+                :setting_value,
+                :type
+            )
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'setting_key' => $key,
+            'setting_value' => $value,
+            'type' => $type
+        ]);
     }
 
-    /**
-     * Cập nhật nhiều settings cùng lúc
-     * 
-     * Input:
-     *   - $settings: array ['key1' => 'value1', 'key2' => 'value2', ...]
-     * 
-     * Output: bool
-     * 
-     * Gợi ý: Dùng transaction, duyệt mảng và gọi createOrUpdate cho mỗi cặp
-     */
     public function updateMany($settings)
     {
-        // TODO: code tại đây
+        try {
+            $this->beginTransaction();
+
+            foreach ($settings as $key => $value) {
+                $this->createOrUpdate($key, $value);
+            }
+
+            $this->commit();
+
+            return true;
+        } catch (Exception $e) {
+            $this->rollback();
+
+            return false;
+        }
     }
 }

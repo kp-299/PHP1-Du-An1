@@ -1,104 +1,186 @@
 <?php
-/**
- * FILE: controllers/client/OrderController.php
- * CHỨC NĂNG: Xử lý đặt hàng (checkout), lịch sử đơn hàng, chi tiết đơn
- * 
- * CLASS: ClientOrderController
- * 
- * ROUTE MẪU:
- *   GET  index.php?area=client&controller=order&action=checkout  -> form thanh toán
- *   POST index.php?area=client&controller=order&action=place    -> xử lý đặt hàng
- *   GET  index.php?area=client&controller=order&action=history  -> lịch sử đơn
- *   GET  index.php?area=client&controller=order&action=detail&id=1 -> chi tiết đơn
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/checkout.php
- *   views/pages/order_history.php
- *   views/pages/order_detail.php
- * 
- * LƯU ĐỒ XỬ LÝ CHECKOUT:
- *   checkout(): hiện form thanh toán
- *     - Nếu giỏ hàng rỗng -> redirect về giỏ + flash
- *     - Nếu user đã login -> tự điền thông tin
- *   
- *   place(): xử lý đặt hàng
- *     1. Check POST, validate
- *     2. Lấy thông tin từ $_POST
- *     3. Tính total_amount từ Cart
- *     4. Bắt đầu transaction (DB::beginTransaction)
- *     5. Order::create(data)
- *     6. OrderItem::createMany(orderId, cartItems)
- *     7. foreach cart items: Product::decreaseStock
- *     8. Cart::clear()
- *     9. Commit transaction
- *     10. createLog('create_order')
- *     11. setFlash + redirect order detail
- * 
- * YÊU CẦU: Phải có giỏ hàng mới được checkout
- */
 
 require_once __DIR__ . '/../BaseController.php';
+
+require_once __DIR__ . '/../../models/Cart.php';
+require_once __DIR__ . '/../../models/Order.php';
+require_once __DIR__ . '/../../models/OrderItem.php';
+require_once __DIR__ . '/../../models/Product.php';
+require_once __DIR__ . '/../../models/WebSetting.php';
+
+require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/log.php';
+require_once __DIR__ . '/../../helpers/validation.php';
 
 class ClientOrderController extends BaseController
 {
     protected $folder = 'pages';
 
-    /**
-     * Hiển thị form thanh toán
-     * 
-     * Output: render views/pages/checkout.php với:
-     *   - $title: string 'Thanh toán'
-     *   - $cartItems: array
-     *   - $totalAmount: float
-     *   - $currentUser: array|null (nếu đã login)
-     * 
-     * Nếu giỏ rỗng thì redirect về giỏ hàng
-     */
     public function checkout()
     {
-        // TODO: code tại đây
+        $cartModel = new Cart();
+        $settingModel = new WebSetting();
+
+        if ($cartModel->isEmpty()) {
+            header('Location: index.php?area=client&controller=cart&action=index');
+            exit;
+        }
+
+        $cartItems = $cartModel->getItems();
+        $totalAmount = $cartModel->getTotalAmount();
+        $settings = $settingModel->getSimpleSettings();
+
+        $this->render('checkout', [
+            'title' => 'Thanh toán',
+            'cartItems' => $cartItems,
+            'totalAmount' => $totalAmount,
+            'settings' => $settings,
+            'currentUser' => currentUser(),
+        ]);
     }
 
-    /**
-     * Xử lý đặt hàng (POST)
-     * 
-     * Input:  $_POST['customer_name'], $_POST['customer_phone'],
-     *         $_POST['customer_address'], $_POST['note'], $_POST['payment_method']
-     * Output: redirect đến trang chi tiết đơn hàng nếu thành công
-     *         hoặc quay lại checkout với lỗi
-     */
-    public function place()
+    public function handleCheckout()
     {
-        // TODO: code tại đây
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=client&controller=order&action=checkout');
+            exit;
+        }
+
+        $cartModel = new Cart();
+
+        if ($cartModel->isEmpty()) {
+            header('Location: index.php?area=client&controller=cart&action=index');
+            exit;
+        }
+
+        $errors = validateCheckout($_POST);
+
+        if (!empty($errors)) {
+            $this->render('checkout', [
+                'title' => 'Thanh toán',
+                'errors' => $errors,
+                'old' => $_POST,
+                'cartItems' => $cartModel->getItems(),
+                'totalAmount' => $cartModel->getTotalAmount(),
+                'currentUser' => currentUser(),
+            ]);
+            return;
+        }
+
+        $cartItems = $cartModel->getItems();
+        $totalAmount = $cartModel->getTotalAmount();
+
+        $orderModel = new Order();
+        $orderItemModel = new OrderItem();
+        $productModel = new Product();
+
+        $orderId = $orderModel->create([
+            'user_id' => currentUserId(),
+            'customer_name' => trim($_POST['customer_name']),
+            'customer_phone' => trim($_POST['customer_phone']),
+            'customer_address' => trim($_POST['customer_address']),
+            'total_amount' => $totalAmount,
+            'note' => trim($_POST['note'] ?? ''),
+            'payment_method' => $_POST['payment_method'] ?? 'cod',
+            'payment_status' => 'unpaid',
+            'status' => 'pending',
+        ]);
+
+        $orderItemModel->createMany($orderId, $cartItems);
+
+        foreach ($cartItems as $item) {
+            $productModel->decreaseStock($item['id'], $item['quantity']);
+        }
+
+        $cartModel->clear();
+
+        createLog('create_order');
+
+        if (isLoggedIn()) {
+            header('Location: index.php?area=client&controller=order&action=history');
+            exit;
+        }
+
+        header('Location: index.php?area=client&controller=pages&action=home');
+        exit;
     }
 
-    /**
-     * Lịch sử đơn hàng (yêu cầu đăng nhập)
-     * 
-     * Output: render views/pages/order_history.php với:
-     *   - $title: string 'Lịch sử đơn hàng'
-     *   - $orders: array đơn hàng của user hiện tại
-     * 
-     * Yêu cầu: requireLogin()
-     */
     public function history()
     {
-        // TODO: code tại đây
+        requireLogin();
+
+        $orderModel = new Order();
+        $settingModel = new WebSetting();
+
+        $orders = $orderModel->getByUserId(currentUserId());
+        $settings = $settingModel->getSimpleSettings();
+
+        $this->render('orderHistory', [
+            'title' => 'Lịch sử đơn hàng',
+            'orders' => $orders,
+            'settings' => $settings,
+        ]);
     }
 
-    /**
-     * Chi tiết đơn hàng (yêu cầu đăng nhập)
-     * 
-     * Input:  $_GET['id']
-     * Output: render views/pages/order_detail.php với:
-     *   - $title: string 'Chi tiết đơn hàng'
-     *   - $order: array thông tin đơn
-     *   - $orderItems: array sản phẩm trong đơn
-     * 
-     * Kiểm tra: đơn hàng phải thuộc về user hiện tại
-     */
     public function detail()
     {
-        // TODO: code tại đây
+        requireLogin();
+
+        $orderId = $_GET['id'] ?? null;
+
+        if (!$orderId) {
+            header('Location: index.php?area=client&controller=order&action=history');
+            exit;
+        }
+
+        $orderModel = new Order();
+        $orderItemModel = new OrderItem();
+        $settingModel = new WebSetting();
+
+        $order = $orderModel->find($orderId);
+
+        if (!$order || $order['user_id'] != currentUserId()) {
+            header('Location: index.php?area=client&controller=pages&action=error');
+            exit;
+        }
+
+        $orderItems = $orderItemModel->getByOrderId($orderId);
+        $settings = $settingModel->getSimpleSettings();
+
+        $this->render('orderDetail', [
+            'title' => 'Chi tiết đơn hàng',
+            'order' => $order,
+            'orderItems' => $orderItems,
+            'settings' => $settings,
+        ]);
+    }
+
+    public function cancel()
+    {
+        requireLogin();
+
+        $orderId = $_GET['id'] ?? null;
+
+        if (!$orderId) {
+            header('Location: index.php?area=client&controller=order&action=history');
+            exit;
+        }
+
+        $orderModel = new Order();
+
+        $order = $orderModel->find($orderId);
+
+        if (!$order || $order['user_id'] != currentUserId()) {
+            header('Location: index.php?area=client&controller=pages&action=error');
+            exit;
+        }
+
+        if ($order['status'] === 'pending') {
+            $orderModel->cancel($orderId);
+            createLog('cancel_order');
+        }
+
+        header('Location: index.php?area=client&controller=order&action=history');
+        exit;
     }
 }

@@ -1,96 +1,101 @@
 <?php
-/**
- * FILE: controllers/client/CartController.php
- * CHỨC NĂNG: Xử lý giỏ hàng - thêm, sửa, xóa, xem giỏ
- * 
- * CLASS: ClientCartController
- * 
- * ROUTE MẪU:
- *   GET  index.php?area=client&controller=cart&action=index   -> xem giỏ hàng
- *   POST index.php?area=client&controller=cart&action=add     -> thêm SP
- *   POST index.php?area=client&controller=cart&action=update  -> cập nhật SL
- *   POST index.php?area=client&controller=cart&action=remove  -> xóa SP
- *   POST index.php?area=client&controller=cart&action=clear   -> xóa toàn bộ
- * 
- * VIEW TƯƠNG ỨNG:
- *   views/pages/cart.php
- * 
- * CÁCH DÙNG:
- *   $cart = new Cart();
- *   $cart->add($productId, $quantity);
- *   $items = $cart->getItems();
- */
 
 require_once __DIR__ . '/../BaseController.php';
+
+require_once __DIR__ . '/../../models/Cart.php';
+require_once __DIR__ . '/../../models/WebSetting.php';
+
+require_once __DIR__ . '/../../helpers/log.php';
 
 class ClientCartController extends BaseController
 {
     protected $folder = 'pages';
 
-    /**
-     * Hiển thị giỏ hàng
-     * 
-     * Output: render views/pages/cart.php với:
-     *   - $title: string 'Giỏ hàng'
-     *   - $cartItems: array danh sách sản phẩm
-     *   - $totalAmount: int|float tổng tiền
-     *   - $totalQuantity: int tổng số lượng
-     */
     public function index()
     {
-        // TODO: code tại đây
+        $cartModel = new Cart();
+        $settingModel = new WebSetting();
+
+        $cartItems = $cartModel->getItems();
+        $totalAmount = $cartModel->getTotalAmount();
+        $totalQuantity = $cartModel->getTotalQuantity();
+        $settings = $settingModel->getSimpleSettings();
+
+        $this->render('cart', [
+            'title' => 'Giỏ hàng',
+            'cartItems' => $cartItems,
+            'totalAmount' => $totalAmount,
+            'totalQuantity' => $totalQuantity,
+            'settings' => $settings,
+        ]);
     }
 
-    /**
-     * Thêm sản phẩm vào giỏ (POST)
-     * 
-     * Input:  $_POST['product_id'], $_POST['quantity'] (mặc định 1)
-     * Output: redirect về trang trước hoặc giỏ hàng
-     * 
-     * Các bước:
-     *   1. Lấy product_id, quantity từ $_POST
-     *   2. (new Cart())->add($productId, $quantity)
-     *   3. setFlash('success', 'Đã thêm vào giỏ hàng')
-     *   4. redirectBack()
-     */
     public function add()
     {
-        // TODO: code tại đây
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=client&controller=product&action=index');
+            exit;
+        }
+
+        $productId = $_POST['product_id'] ?? null;
+        $quantity = (int)($_POST['quantity'] ?? 1);
+
+        if (!$productId || $quantity <= 0) {
+            header('Location: index.php?area=client&controller=product&action=index');
+            exit;
+        }
+
+        $cartModel = new Cart();
+
+        $cartModel->add($productId, $quantity);
+
+        createLog('add_to_cart');
+
+        header('Location: index.php?area=client&controller=cart&action=index');
+        exit;
     }
 
-    /**
-     * Cập nhật số lượng (POST)
-     * 
-     * Input:  $_POST['product_id'], $_POST['quantity']
-     * Output: redirect về giỏ hàng
-     * 
-     * Gợi ý:
-     *   (new Cart())->update($productId, $quantity);
-     *   redirectClient('cart', 'index');
-     */
     public function update()
     {
-        // TODO: code tại đây
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?area=client&controller=cart&action=index');
+            exit;
+        }
+
+        $productId = $_POST['product_id'] ?? null;
+        $quantity = (int)($_POST['quantity'] ?? 1);
+
+        $cartModel = new Cart();
+
+        if ($productId) {
+            $cartModel->update($productId, $quantity);
+        }
+
+        header('Location: index.php?area=client&controller=cart&action=index');
+        exit;
     }
 
-    /**
-     * Xóa sản phẩm khỏi giỏ (POST)
-     * 
-     * Input:  $_POST['product_id']
-     * Output: redirect về giỏ hàng
-     */
     public function remove()
     {
-        // TODO: code tại đây
+        $productId = $_GET['product_id'] ?? null;
+
+        $cartModel = new Cart();
+
+        if ($productId) {
+            $cartModel->remove($productId);
+        }
+
+        header('Location: index.php?area=client&controller=cart&action=index');
+        exit;
     }
 
-    /**
-     * Xóa toàn bộ giỏ hàng (POST)
-     * 
-     * Output: redirect về giỏ hàng (giỏ rỗng)
-     */
     public function clear()
     {
-        // TODO: code tại đây
+        $cartModel = new Cart();
+
+        $cartModel->clear();
+
+        header('Location: index.php?area=client&controller=cart&action=index');
+        exit;
     }
 }

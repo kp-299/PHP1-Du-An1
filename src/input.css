@@ -1,0 +1,52 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+.admin-page .form-control {
+  width: 100%;
+  display: block;
+}
+
+.admin-page .label {
+  width: 100%;
+  display: block;
+  padding-left: 0;
+  padding-right: 0;
+  margin-bottom: 8px;
+}
+
+.admin-page .label-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.admin-page input,
+.admin-page select,
+.admin-page textarea,
+.admin-page .input,
+.admin-page .select,
+.admin-page .textarea,
+.admin-page .file-input {
+  width: 100%;
+  max-width: 100%;
+  display: block;
+}
+
+.admin-page textarea,
+.admin-page .textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.admin-page .card {
+  border-radius: 24px;
+}
+
+.admin-page input[type="file"] {
+  width: 100%;
+}
+
+.admin-page input[type="color"] {
+  width: 100%;
+  min-height: 48px;
+}

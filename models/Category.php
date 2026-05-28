@@ -1,15 +1,8 @@
 <?php
+
 /**
  * FILE: models/Category.php
- * CHỨC NĂNG: Model xử lý bảng categories (danh mục sản phẩm)
- * 
- * BẢNG: categories
- *   id, name, slug, description, image,
- *   status (active/hidden), created_at, updated_at
- * 
- * CÁCH DÙNG:
- *   $categoryModel = new Category();
- *   $categories = $categoryModel->getActive();
+ * CHỨC NĂNG: Model xử lý bảng categories
  */
 
 require_once __DIR__ . '/BaseModel.php';
@@ -19,166 +12,242 @@ class Category extends BaseModel
     public function __construct()
     {
         parent::__construct();
-        // TODO: set tên bảng
-        // $this->table = 'categories';
+
+        $this->table = 'categories';
     }
 
-    /**
-     * Lấy danh sách danh mục (có filter)
-     * 
-     * Input:
-     *   - $filters: array [
-     *       'status'  => string (optional),
-     *       'keyword' => string (optional),
-     *       'limit'   => int,
-     *       'offset'  => int
-     *     ]
-     * 
-     * Output: array
-     * 
-     * SQL: SELECT * FROM categories WHERE 1=1 + điều kiện động, ORDER BY id DESC
-     */
     public function getAll($filters = [])
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT *
+            FROM categories
+            WHERE 1 = 1
+        ";
+
+        $params = [];
+
+        if (!empty($filters['status'])) {
+            $sql .= " AND status = :status";
+            $params['status'] = $filters['status'];
+        }
+
+        if (!empty($filters['keyword'])) {
+            $sql .= " AND name LIKE :keyword";
+            $params['keyword'] = '%' . $filters['keyword'] . '%';
+        }
+
+        $sql .= " ORDER BY id DESC";
+
+        if (isset($filters['limit'])) {
+            $sql .= " LIMIT :limit";
+
+            if (isset($filters['offset'])) {
+                $sql .= " OFFSET :offset";
+            }
+        }
+
+        $stmt = $this->db->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+
+        if (isset($filters['limit'])) {
+            $stmt->bindValue(':limit', (int) $filters['limit'], PDO::PARAM_INT);
+
+            if (isset($filters['offset'])) {
+                $stmt->bindValue(':offset', (int) $filters['offset'], PDO::PARAM_INT);
+            }
+        }
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
-    /**
-     * Lấy danh mục đang active (cho client)
-     * 
-     * Input:  (không tham số)
-     * Output: array - danh sách categories có status = 'active'
-     * 
-     * SQL: SELECT * FROM categories WHERE status = 'active' ORDER BY id DESC
-     */
     public function getActive()
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT *
+            FROM categories
+            WHERE status = 'active'
+            ORDER BY id DESC
+        ";
+
+        $stmt = $this->db->query($sql);
+
+        return $stmt->fetchAll();
     }
 
-    /**
-     * Tìm danh mục theo slug
-     * 
-     * Input:
-     *   - $slug: string
-     * 
-     * Output: array|false
-     * 
-     * SQL: SELECT * FROM categories WHERE slug = :slug LIMIT 1
-     */
     public function findBySlug($slug)
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT *
+            FROM categories
+            WHERE slug = :slug
+            LIMIT 1
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'slug' => $slug
+        ]);
+
+        return $stmt->fetch();
     }
 
-    /**
-     * Thêm danh mục mới
-     * 
-     * Input:
-     *   - $data: array ['name', 'slug', 'description', 'image', 'status']
-     * 
-     * Output: int|false - ID vừa tạo
-     * 
-     * SQL: INSERT INTO categories (name, slug, ...) VALUES (...)
-     */
     public function create($data)
     {
-        // TODO: code tại đây
+        $sql = "
+            INSERT INTO categories (
+                name,
+                slug,
+                description,
+                image,
+                status
+            )
+            VALUES (
+                :name,
+                :slug,
+                :description,
+                :image,
+                :status
+            )
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $result = $stmt->execute([
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'description' => $data['description'] ?? null,
+            'image' => $data['image'] ?? null,
+            'status' => $data['status'] ?? 'active',
+        ]);
+
+        if (!$result) {
+            return false;
+        }
+
+        return $this->db->lastInsertId();
     }
 
-    /**
-     * Cập nhật danh mục
-     * 
-     * Input:
-     *   - $id: int
-     *   - $data: array ['name', 'slug', 'description', 'image', 'status']
-     * 
-     * Output: bool
-     * 
-     * SQL: UPDATE categories SET ... WHERE id = :id
-     */
     public function update($id, $data)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE categories
+            SET
+                name = :name,
+                slug = :slug,
+                description = :description,
+                image = :image,
+                status = :status
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'description' => $data['description'] ?? null,
+            'image' => $data['image'] ?? null,
+            'status' => $data['status'] ?? 'active',
+        ]);
     }
 
-    /**
-     * Ẩn danh mục (set status = 'hidden')
-     * 
-     * Input:
-     *   - $id: int
-     * 
-     * Output: bool
-     * 
-     * SQL: UPDATE categories SET status = 'hidden' WHERE id = :id
-     */
     public function hide($id)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE categories
+            SET status = 'hidden'
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id
+        ]);
     }
 
-    /**
-     * Hiện danh mục (set status = 'active')
-     * 
-     * Input:
-     *   - $id: int
-     * 
-     * Output: bool
-     * 
-     * SQL: UPDATE categories SET status = 'active' WHERE id = :id
-     */
     public function active($id)
     {
-        // TODO: code tại đây
+        $sql = "
+            UPDATE categories
+            SET status = 'active'
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id
+        ]);
     }
 
-    /**
-     * Xóa cứng danh mục (dùng nếu cần xóa thật)
-     * 
-     * Input:
-     *   - $id: int
-     * 
-     * Output: bool
-     * 
-     * SQL: DELETE FROM categories WHERE id = :id
-     */
     public function deleteHard($id)
     {
-        // TODO: code tại đây
+        $sql = "
+            DELETE FROM categories
+            WHERE id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id
+        ]);
     }
 
-    /**
-     * Kiểm tra danh mục có sản phẩm không
-     * 
-     * Input:
-     *   - $id: int
-     * 
-     * Output: bool - true nếu có sản phẩm
-     * 
-     * SQL: SELECT COUNT(*) FROM products WHERE category_id = :id
-     */
     public function hasProducts($id)
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM products
+            WHERE category_id = :id
+        ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'id' => $id
+        ]);
+
+        $result = $stmt->fetch();
+
+        return (int) $result['total'] > 0;
     }
 
-    /**
-     * Đếm danh mục active
-     * 
-     * Output: int
-     */
     public function countActive()
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM categories
+            WHERE status = 'active'
+        ";
+
+        $stmt = $this->db->query($sql);
+
+        $result = $stmt->fetch();
+
+        return (int) $result['total'];
     }
 
-    /**
-     * Đếm danh mục hidden
-     * 
-     * Output: int
-     */
     public function countHidden()
     {
-        // TODO: code tại đây
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM categories
+            WHERE status = 'hidden'
+        ";
+
+        $stmt = $this->db->query($sql);
+
+        $result = $stmt->fetch();
+
+        return (int) $result['total'];
     }
 }
