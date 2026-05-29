@@ -63,6 +63,18 @@ $routes = [
                 'changePassword'
             ]
         ],
+
+        'post' => [
+            'file' => __DIR__ . '/controllers/client/PostController.php',
+            'class' => 'ClientPostController',
+            'actions' => ['index', 'detail']
+        ],
+
+        'video' => [
+            'file' => __DIR__ . '/controllers/client/VideoController.php',
+            'class' => 'ClientVideoController',
+            'actions' => ['index']
+        ],
     ],
 
     'admin' => [

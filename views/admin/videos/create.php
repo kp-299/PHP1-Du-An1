@@ -101,12 +101,17 @@
                         <p class="text-sm text-slate-500 mt-1">Tối đa theo cấu hình upload server.</p>
                     </div>
 
-                    <input type="file" name="video_file"
-                        class="file-input file-input-bordered rounded-2xl w-full <?= !empty($errors['video_file']) ? 'file-input-error' : '' ?>"
-                        accept="video/*">
+                    <label class="block mb-2">
+                        <span class="text-sm font-semibold text-slate-700">Link YouTube</span>
+                    </label>
 
-                    <?php if (!empty($errors['video_file'])): ?>
-                    <p class="text-error text-sm"><?= htmlspecialchars($errors['video_file']) ?></p>
+                    <input type="text" name="video_url"
+                        class="input input-bordered rounded-2xl w-full <?= !empty($errors['video_url']) ? 'input-error' : '' ?>"
+                        placeholder="https://www.youtube.com/watch?v=... hoặc https://youtube.com/shorts/..."
+                        value="<?= htmlspecialchars($old['video_url'] ?? '') ?>">
+
+                    <?php if (!empty($errors['video_url'])): ?>
+                    <p class="text-error text-sm mt-2"><?= htmlspecialchars($errors['video_url']) ?></p>
                     <?php endif; ?>
                 </div>
             </div>

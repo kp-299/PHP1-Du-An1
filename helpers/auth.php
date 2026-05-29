@@ -1,54 +1,59 @@
 <?php
 
-function isLoggedIn()
-{
-    return !empty($_SESSION['user']);
-}
-
 function currentUser()
 {
     return $_SESSION['user'] ?? null;
 }
 
-function currentUserId()
+function isLoggedIn()
 {
-    return $_SESSION['user']['id'] ?? null;
-}
-
-function currentUserRole()
-{
-    return $_SESSION['user']['role'] ?? null;
+    return !empty($_SESSION['user']);
 }
 
 function isAdmin()
 {
-    return isLoggedIn() && currentUserRole() === 'admin';
+    return isLoggedIn() && ($_SESSION['user']['role'] ?? '') === 'admin';
 }
 
 function requireLogin()
 {
     if (!isLoggedIn()) {
-        header('Location: index.php?area=client&controller=auth&action=login');
-        exit;
-    }
-}
+        $_SESSION['intended_url'] = $_SERVER['REQUEST_URI'] ?? 'index.php';
 
-function requireGuest()
-{
-    if (isLoggedIn()) {
-        header('Location: index.php?area=client&controller=pages&action=home');
+        header('Location: index.php?area=client&controller=auth&action=login');
         exit;
     }
 }
 
 function requireAdmin()
 {
-    if (empty($_SESSION['user'])) {
-        $_SESSION['user'] = [
-            'id' => 1,
-            'name' => 'Admin Test',
-            'email' => 'admin@test.com',
-            'role' => 'admin'
+    if (!isLoggedIn()) {
+        $_SESSION['intended_url'] = $_SERVER['REQUEST_URI'] ?? 'index.php';
+
+        header('Location: index.php?area=client&controller=auth&action=login');
+        exit;
+    }
+
+    if (!isAdmin()) {
+        $_SESSION['flash'] = [
+            'type' => 'error',
+            'message' => 'Bạn không có quyền truy cập admin dashboard.',
         ];
+
+        header('Location: index.php?area=client&controller=pages&action=home');
+        exit;
+    }
+}
+
+function guestOnly()
+{
+    if (isLoggedIn()) {
+        if (isAdmin()) {
+            header('Location: index.php?area=admin&controller=dashboard&action=index');
+            exit;
+        }
+
+        header('Location: index.php?area=client&controller=pages&action=home');
+        exit;
     }
 }

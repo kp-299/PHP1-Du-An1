@@ -4,15 +4,22 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
 
-    <title><?= htmlspecialchars($title ?? 'Demo PHP MVC') ?></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
-    <link rel="stylesheet" href="src/output.css">
+    <title><?= htmlspecialchars($title ?? 'Trái Cây Tươi') ?></title>
+
+    <link rel="stylesheet" href="/src/output.css?v=<?= time() ?>">
 </head>
 
-<body>
-    <?= $content ?>
+<body class="bg-slate-50 text-slate-900">
+    <?php require __DIR__ . '/layouts/client_navbar.php'; ?>
+
+    <main>
+        <?= $content ?>
+    </main>
+
+    <?php require __DIR__ . '/layouts/client_footer.php'; ?>
 </body>
 
 </html>
