@@ -20,6 +20,7 @@ class BaseController
 
         require __DIR__ . '/../views/app.php';
     }
+}
 
     public function renderAdmin($viewName, $data = [])
     {
