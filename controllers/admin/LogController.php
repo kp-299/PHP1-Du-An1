@@ -15,19 +15,31 @@ class AdminLogController extends BaseController
 
         $logModel = new Log();
 
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $limit = 15;
+        $offset = ($page - 1) * $limit;
+
         $filters = [
-            'action' => $_GET['action'] ?? '',
-            'user_id' => $_GET['user_id'] ?? '',
-            'date_from' => $_GET['date_from'] ?? '',
-            'date_to' => $_GET['date_to'] ?? '',
+            'log_action' => trim($_GET['log_action'] ?? ''),
+            'user_id' => trim($_GET['user_id'] ?? ''),
+            'method' => trim($_GET['method'] ?? ''),
+            'date_from' => trim($_GET['date_from'] ?? ''),
+            'date_to' => trim($_GET['date_to'] ?? ''),
+            'limit' => $limit,
+            'offset' => $offset,
         ];
 
         $logs = $logModel->getAllLogs($filters);
+        $totalLogs = $logModel->countFiltered($filters);
+        $totalPages = max(1, (int)ceil($totalLogs / $limit));
 
         $this->renderAdmin('logs/index', [
             'title' => 'Log hệ thống',
             'logs' => $logs,
             'filters' => $filters,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalLogs' => $totalLogs,
         ]);
     }
 
@@ -40,6 +52,11 @@ class AdminLogController extends BaseController
 
         createLog('clear_logs');
 
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => 'Đã xóa toàn bộ logs.',
+        ];
+
         header('Location: index.php?area=admin&controller=log&action=index');
         exit;
     }
@@ -48,12 +65,17 @@ class AdminLogController extends BaseController
     {
         requireAdmin();
 
-        $days = $_GET['days'] ?? 30;
+        $days = max(1, (int)($_GET['days'] ?? 30));
 
         $logModel = new Log();
         $logModel->clearOld($days);
 
-        createLog('clear_old_logs');
+        createLog('clear_old_logs_' . $days . '_days');
+
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => 'Đã xóa logs cũ hơn ' . $days . ' ngày.',
+        ];
 
         header('Location: index.php?area=admin&controller=log&action=index');
         exit;

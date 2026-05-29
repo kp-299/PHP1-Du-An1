@@ -2,6 +2,8 @@
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/log.php';
+
 require_once __DIR__ . '/../../models/Product.php';
 require_once __DIR__ . '/../../models/Category.php';
 require_once __DIR__ . '/../../models/Post.php';
@@ -14,6 +16,8 @@ class ClientProductController extends BaseController
 
     public function index()
     {
+        createLog('view_products_page');
+
         $productModel = new Product();
         $categoryModel = new Category();
         $postModel = new Post();
@@ -39,7 +43,7 @@ class ClientProductController extends BaseController
             }
         }
 
-        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $page = max(1, (int)($_GET['page'] ?? 1));
         $limit = 18;
         $offset = ($page - 1) * $limit;
 
@@ -54,7 +58,7 @@ class ClientProductController extends BaseController
 
         $products = $productModel->getClientProducts($filters);
         $totalProducts = $productModel->countFiltered($filters);
-        $totalPages = max(1, ceil($totalProducts / $limit));
+        $totalPages = max(1, (int)ceil($totalProducts / $limit));
 
         $posts = $postModel->getPublished(6);
 
@@ -89,6 +93,8 @@ class ClientProductController extends BaseController
         $id = $_GET['id'] ?? null;
 
         if (!$id) {
+            createLog('view_product_detail_missing_id');
+
             header('Location: index.php?area=client&controller=product&action=index');
             exit;
         }
@@ -104,9 +110,13 @@ class ClientProductController extends BaseController
         $product = $productModel->findDetailById($id);
 
         if (!$product) {
+            createLog('view_product_detail_not_found');
+
             header('Location: index.php?area=client&controller=pages&action=error');
             exit;
         }
+
+        createLog('view_product_detail_' . $product['id']);
 
         $productImages = $productModel->getImages($id);
 

@@ -496,4 +496,22 @@ class Product extends BaseModel
             return [];
         }
     }
+
+    public function findById($id)
+    {
+        $sql = "
+        SELECT *
+        FROM products
+        WHERE id = :id
+        LIMIT 1
+    ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'id' => $id,
+        ]);
+
+        return $stmt->fetch();
+    }
 }

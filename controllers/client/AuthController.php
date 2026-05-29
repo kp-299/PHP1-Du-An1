@@ -4,15 +4,26 @@ require_once __DIR__ . '/../BaseController.php';
 
 require_once __DIR__ . '/../../helpers/auth.php';
 require_once __DIR__ . '/../../helpers/redirect.php';
+require_once __DIR__ . '/../../helpers/log.php';
 
 require_once __DIR__ . '/../../models/User.php';
+require_once __DIR__ . '/../../models/WebSetting.php';
 
 class ClientAuthController extends BaseController
 {
+    private function getSettings()
+    {
+        $settingModel = new WebSetting();
+        return $settingModel->getSimpleSettings();
+    }
+
     public function login()
     {
+        guestOnly();
+
         $this->renderAuth('login', [
             'title' => 'Đăng nhập',
+            'settings' => $this->getSettings(),
             'errors' => [],
             'old' => [],
         ]);
@@ -20,8 +31,11 @@ class ClientAuthController extends BaseController
 
     public function register()
     {
+        guestOnly();
+
         $this->renderAuth('register', [
             'title' => 'Đăng ký',
+            'settings' => $this->getSettings(),
             'errors' => [],
             'old' => [],
         ]);
@@ -41,6 +55,8 @@ class ClientAuthController extends BaseController
 
         if ($email === '') {
             $errors['email'] = 'Email không được để trống';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Email không hợp lệ';
         }
 
         if ($password === '') {
@@ -48,10 +64,15 @@ class ClientAuthController extends BaseController
         }
 
         if (!empty($errors)) {
+            createLog('login_validate_failed');
+
             $this->renderAuth('login', [
                 'title' => 'Đăng nhập',
+                'settings' => $this->getSettings(),
                 'errors' => $errors,
-                'old' => $_POST,
+                'old' => [
+                    'email' => $email,
+                ],
             ]);
             return;
         }
@@ -60,26 +81,38 @@ class ClientAuthController extends BaseController
         $user = $userModel->findByEmail($email);
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
+            createLog('login_failed');
+
             $this->renderAuth('login', [
                 'title' => 'Đăng nhập',
+                'settings' => $this->getSettings(),
                 'errors' => [
                     'general' => 'Email hoặc mật khẩu không đúng',
                 ],
-                'old' => $_POST,
+                'old' => [
+                    'email' => $email,
+                ],
             ]);
             return;
         }
 
         if (($user['status'] ?? '') !== 'active') {
+            createLog('login_blocked_inactive_user', $user['id']);
+
             $this->renderAuth('login', [
                 'title' => 'Đăng nhập',
+                'settings' => $this->getSettings(),
                 'errors' => [
                     'general' => 'Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt',
                 ],
-                'old' => $_POST,
+                'old' => [
+                    'email' => $email,
+                ],
             ]);
             return;
         }
+
+        session_regenerate_id(true);
 
         $_SESSION['user'] = [
             'id' => $user['id'],
@@ -88,6 +121,8 @@ class ClientAuthController extends BaseController
             'role' => $user['role'],
             'status' => $user['status'],
         ];
+
+        createLog('login_success', $user['id']);
 
         if (($user['role'] ?? '') === 'admin') {
             header('Location: index.php?area=admin&controller=dashboard&action=index');
@@ -114,6 +149,8 @@ class ClientAuthController extends BaseController
 
         if ($name === '') {
             $errors['name'] = 'Tên không được để trống';
+        } elseif (mb_strlen($name) < 2) {
+            $errors['name'] = 'Tên tối thiểu 2 ký tự';
         }
 
         if ($email === '') {
@@ -136,20 +173,26 @@ class ClientAuthController extends BaseController
 
         $userModel = new User();
 
-        if ($email !== '' && $userModel->findByEmail($email)) {
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) && $userModel->findByEmail($email)) {
             $errors['email'] = 'Email này đã được sử dụng';
         }
 
         if (!empty($errors)) {
+            createLog('register_validate_failed');
+
             $this->renderAuth('register', [
                 'title' => 'Đăng ký',
+                'settings' => $this->getSettings(),
                 'errors' => $errors,
-                'old' => $_POST,
+                'old' => [
+                    'name' => $name,
+                    'email' => $email,
+                ],
             ]);
             return;
         }
 
-        $userModel->create([
+        $createdId = $userModel->create([
             'name' => $name,
             'email' => $email,
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
@@ -158,6 +201,25 @@ class ClientAuthController extends BaseController
             'role' => 'user',
             'status' => 'active',
         ]);
+
+        if (!$createdId) {
+            createLog('register_failed');
+
+            $this->renderAuth('register', [
+                'title' => 'Đăng ký',
+                'settings' => $this->getSettings(),
+                'errors' => [
+                    'general' => 'Đăng ký thất bại, vui lòng thử lại',
+                ],
+                'old' => [
+                    'name' => $name,
+                    'email' => $email,
+                ],
+            ]);
+            return;
+        }
+
+        createLog('register_success', $createdId);
 
         $_SESSION['flash'] = [
             'type' => 'success',
@@ -170,7 +232,11 @@ class ClientAuthController extends BaseController
 
     public function logout()
     {
+        createLog('logout');
+
         unset($_SESSION['user']);
+
+        session_regenerate_id(true);
 
         header('Location: index.php?area=client&controller=auth&action=login');
         exit;

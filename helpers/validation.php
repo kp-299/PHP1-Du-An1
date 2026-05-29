@@ -106,16 +106,36 @@ function validateCheckout($data)
 {
     $errors = [];
 
-    if (!required($data['customer_name'] ?? '')) {
-        $errors['customer_name'] = 'Tên khách hàng không được để trống';
+    $customerName = trim($data['customer_name'] ?? '');
+    $customerPhone = trim($data['customer_phone'] ?? '');
+    $customerEmail = trim($data['customer_email'] ?? '');
+    $customerAddress = trim($data['customer_address'] ?? '');
+    $paymentMethod = trim($data['payment_method'] ?? '');
+
+    if ($customerName === '') {
+        $errors['customer_name'] = 'Vui lòng nhập họ tên.';
+    } elseif (mb_strlen($customerName) < 2) {
+        $errors['customer_name'] = 'Họ tên tối thiểu 2 ký tự.';
     }
 
-    if (!required($data['customer_phone'] ?? '')) {
-        $errors['customer_phone'] = 'Số điện thoại không được để trống';
+    if ($customerPhone === '') {
+        $errors['customer_phone'] = 'Vui lòng nhập số điện thoại.';
+    } elseif (!preg_match('/^(0|\+84)[0-9]{9,10}$/', $customerPhone)) {
+        $errors['customer_phone'] = 'Số điện thoại không hợp lệ.';
     }
 
-    if (!required($data['customer_address'] ?? '')) {
-        $errors['customer_address'] = 'Địa chỉ không được để trống';
+    if ($customerEmail !== '' && !filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
+        $errors['customer_email'] = 'Email không hợp lệ.';
+    }
+
+    if ($customerAddress === '') {
+        $errors['customer_address'] = 'Vui lòng nhập địa chỉ giao hàng.';
+    } elseif (mb_strlen($customerAddress) < 10) {
+        $errors['customer_address'] = 'Địa chỉ giao hàng cần chi tiết hơn.';
+    }
+
+    if ($paymentMethod === '') {
+        $errors['payment_method'] = 'Vui lòng chọn hình thức thanh toán.';
     }
 
     return $errors;

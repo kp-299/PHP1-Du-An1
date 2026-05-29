@@ -1,16 +1,37 @@
-<div class="min-h-screen grid grid-cols-1 lg:grid-cols-2">
-    <div class="bg-slate-50 flex items-center justify-center px-4 py-12">
+<?php
+$settings = $settings ?? [];
+
+$siteName = $settings['site_name'] ?? 'Fresh Fruit Store';
+$siteSubtitle = $settings['site_subtitle'] ?? 'Fresh Fruit Store';
+$logo = $settings['logo'] ?? '';
+
+$registerTitle = $settings['auth_register_title'] ?? 'Tạo tài khoản mới';
+$registerSubtitle = $settings['auth_register_subtitle'] ?? 'Tạo tài khoản để mua hàng, theo dõi đơn hàng và nhận ưu đãi mới nhất từ cửa hàng.';
+$registerImage = $settings['auth_register_image'] ?? '';
+?>
+
+<div class="min-h-screen bg-slate-50 grid grid-cols-1 lg:grid-cols-2">
+    <div class="flex items-center justify-center px-4 py-10 sm:py-12">
         <div class="w-full max-w-md">
             <div class="mb-8">
                 <a href="index.php?area=client&controller=pages&action=home" class="inline-flex items-center gap-3">
+                    <?php if (!empty($logo)): ?>
+                    <img src="<?= htmlspecialchars($logo) ?>" alt="<?= htmlspecialchars($siteName) ?>"
+                        class="w-12 h-12 rounded-2xl object-cover border border-slate-200 bg-white">
+                    <?php else: ?>
                     <div
-                        class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-lime-500 flex items-center justify-center text-2xl shadow-lg shadow-green-500/20">
-                        🍊
+                        class="w-12 h-12 rounded-2xl site-gradient-bg flex items-center justify-center text-white font-black text-xl">
+                        <?= htmlspecialchars(mb_substr($siteName, 0, 1)) ?>
                     </div>
+                    <?php endif; ?>
 
                     <div>
-                        <h2 class="text-2xl font-extrabold text-slate-950">Fruit Store</h2>
-                        <p class="text-sm text-slate-500">Tạo tài khoản mới</p>
+                        <h2 class="text-2xl font-extrabold text-slate-950">
+                            <?= htmlspecialchars($siteName) ?>
+                        </h2>
+                        <p class="text-sm text-slate-500">
+                            <?= htmlspecialchars($siteSubtitle) ?>
+                        </p>
                     </div>
                 </a>
             </div>
@@ -18,11 +39,20 @@
             <div class="card bg-white border border-slate-200 shadow-sm rounded-3xl">
                 <div class="card-body space-y-5">
                     <div>
-                        <h1 class="text-3xl font-extrabold text-slate-950">Đăng ký</h1>
+                        <h1 class="text-3xl font-extrabold text-slate-950">
+                            Đăng ký
+                        </h1>
+
                         <p class="text-slate-500 mt-2">
                             Tạo tài khoản để mua hàng và theo dõi đơn hàng.
                         </p>
                     </div>
+
+                    <?php if (!empty($errors['general'])): ?>
+                    <div class="alert alert-error">
+                        <span><?= htmlspecialchars($errors['general']) ?></span>
+                    </div>
+                    <?php endif; ?>
 
                     <form action="index.php?area=client&controller=auth&action=handleRegister" method="POST"
                         class="space-y-4">
@@ -36,7 +66,9 @@
                                 placeholder="Nguyễn Văn A" value="<?= htmlspecialchars($old['name'] ?? '') ?>">
 
                             <?php if (!empty($errors['name'])): ?>
-                                <p class="text-error text-sm mt-2"><?= htmlspecialchars($errors['name']) ?></p>
+                            <p class="text-error text-sm mt-2">
+                                <?= htmlspecialchars($errors['name']) ?>
+                            </p>
                             <?php endif; ?>
                         </div>
 
@@ -50,7 +82,9 @@
                                 placeholder="user@gmail.com" value="<?= htmlspecialchars($old['email'] ?? '') ?>">
 
                             <?php if (!empty($errors['email'])): ?>
-                                <p class="text-error text-sm mt-2"><?= htmlspecialchars($errors['email']) ?></p>
+                            <p class="text-error text-sm mt-2">
+                                <?= htmlspecialchars($errors['email']) ?>
+                            </p>
                             <?php endif; ?>
                         </div>
 
@@ -64,7 +98,9 @@
                                 placeholder="Tối thiểu 6 ký tự">
 
                             <?php if (!empty($errors['password'])): ?>
-                                <p class="text-error text-sm mt-2"><?= htmlspecialchars($errors['password']) ?></p>
+                            <p class="text-error text-sm mt-2">
+                                <?= htmlspecialchars($errors['password']) ?>
+                            </p>
                             <?php endif; ?>
                         </div>
 
@@ -78,12 +114,14 @@
                                 placeholder="Nhập lại mật khẩu">
 
                             <?php if (!empty($errors['confirm_password'])): ?>
-                                <p class="text-error text-sm mt-2"><?= htmlspecialchars($errors['confirm_password']) ?></p>
+                            <p class="text-error text-sm mt-2">
+                                <?= htmlspecialchars($errors['confirm_password']) ?>
+                            </p>
                             <?php endif; ?>
                         </div>
 
                         <button type="submit"
-                            class="btn bg-gradient-to-r from-green-500 to-lime-500 border-0 text-white rounded-2xl w-full">
+                            class="btn bg-slate-900 hover:bg-slate-800 border-0 text-white rounded-2xl w-full">
                             Đăng ký
                         </button>
                     </form>
@@ -98,34 +136,55 @@
             </div>
 
             <p class="text-center text-sm text-slate-500 mt-6">
-                <a href="index.php?area=client&controller=pages&action=home" class="font-bold text-green-600">
+                <a href="index.php?area=client&controller=pages&action=home" class="font-bold site-primary-text">
                     ← Về trang chủ
                 </a>
             </p>
         </div>
     </div>
 
-    <div
-        class="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-green-500 via-lime-500 to-yellow-400 p-12 items-center">
-        <div class="absolute inset-0 opacity-20">
-            <div class="absolute top-20 right-16 text-8xl">🍓</div>
-            <div class="absolute bottom-24 left-20 text-8xl">🥭</div>
-            <div class="absolute top-1/2 left-1/3 text-7xl">🍍</div>
-        </div>
+    <div class="hidden lg:flex relative overflow-hidden bg-slate-900 items-center justify-center p-10">
+        <?php if (!empty($registerImage)): ?>
+        <img src="<?= htmlspecialchars($registerImage) ?>" alt="Register image"
+            class="absolute inset-0 w-full h-full object-cover">
+        <div class="absolute inset-0 bg-slate-950/45"></div>
+        <?php else: ?>
+        <div class="absolute inset-0 site-gradient-bg"></div>
+        <div class="absolute inset-0 bg-slate-950/10"></div>
+        <?php endif; ?>
 
-        <div class="relative text-white max-w-xl">
-            <div class="w-16 h-16 rounded-3xl bg-white/20 flex items-center justify-center text-4xl mb-8">
-                🍏
+        <div class="relative z-10 max-w-xl text-white">
+            <div
+                class="w-16 h-16 rounded-3xl bg-white/15 backdrop-blur flex items-center justify-center overflow-hidden mb-8">
+                <?php if (!empty($logo)): ?>
+                <img src="<?= htmlspecialchars($logo) ?>" alt="<?= htmlspecialchars($siteName) ?>"
+                    class="w-full h-full object-cover">
+                <?php else: ?>
+                <span class="text-2xl font-black">
+                    <?= htmlspecialchars(mb_substr($siteName, 0, 1)) ?>
+                </span>
+                <?php endif; ?>
             </div>
 
             <h1 class="text-5xl font-extrabold leading-tight">
-                Tạo tài khoản và mua trái cây tươi ngay hôm nay
+                <?= htmlspecialchars($registerTitle) ?>
             </h1>
 
-            <p class="text-white/90 text-lg leading-8 mt-6">
-                Tài khoản thường chỉ dùng cho client. Muốn vào admin dashboard thì bạn set role = admin trực tiếp trong
-                database.
+            <p class="text-white/85 text-lg leading-8 mt-6">
+                <?= htmlspecialchars($registerSubtitle) ?>
             </p>
+
+            <div class="grid grid-cols-2 gap-4 mt-10">
+                <div class="rounded-3xl bg-white/10 backdrop-blur p-5 border border-white/10">
+                    <p class="text-2xl font-extrabold">Easy</p>
+                    <p class="text-sm text-white/70 mt-1">Đăng ký nhanh</p>
+                </div>
+
+                <div class="rounded-3xl bg-white/10 backdrop-blur p-5 border border-white/10">
+                    <p class="text-2xl font-extrabold">Order</p>
+                    <p class="text-sm text-white/70 mt-1">Theo dõi đơn</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>

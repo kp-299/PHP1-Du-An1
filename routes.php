@@ -58,7 +58,6 @@ $routes = [
             'class' => 'ClientUserController',
             'actions' => [
                 'profile',
-                'editProfile',
                 'updateProfile',
                 'changePassword'
             ]
@@ -100,6 +99,12 @@ $routes = [
             'file' => __DIR__ . '/controllers/admin/OrderController.php',
             'class' => 'AdminOrderController',
             'actions' => ['index', 'detail', 'updateStatus', 'updatePaymentStatus', 'cancel']
+        ],
+
+        'payment' => [
+            'file' => __DIR__ . '/controllers/admin/PaymentController.php',
+            'class' => 'AdminPaymentController',
+            'actions' => ['index', 'update']
         ],
 
         'user' => [
@@ -151,7 +156,13 @@ $routes = [
         'setting' => [
             'file' => __DIR__ . '/controllers/admin/SettingController.php',
             'class' => 'AdminSettingController',
-            'actions' => ['index', 'update']
+            'actions' => [
+                'index',
+                'updateContent',
+                'updateTheme',
+                'updateBanners',
+                'removeBanner',
+            ]
         ],
     ],
 ];

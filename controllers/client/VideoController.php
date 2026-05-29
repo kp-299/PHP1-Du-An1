@@ -2,6 +2,8 @@
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/log.php';
+
 require_once __DIR__ . '/../../models/Video.php';
 require_once __DIR__ . '/../../models/WebSetting.php';
 require_once __DIR__ . '/../../models/Cart.php';
@@ -12,6 +14,8 @@ class ClientVideoController extends BaseController
 
     public function index()
     {
+        createLog('view_videos_page');
+
         $videoModel = new Video();
         $settingModel = new WebSetting();
         $cartModel = new Cart();
@@ -33,17 +37,23 @@ class ClientVideoController extends BaseController
             'offset' => $offset,
         ];
 
-        $shortVideos = $videoModel->getAll(array_merge($baseFilters, [
+        $shortVideos = $videoModel->getAll([
+            'keyword' => $keyword,
+            'status' => 'published',
             'video_type' => 'short',
+            'sort' => $sort,
             'limit' => 12,
             'offset' => 0,
-        ]));
+        ]);
 
-        $longVideos = $videoModel->getAll(array_merge($baseFilters, [
+        $longVideos = $videoModel->getAll([
+            'keyword' => $keyword,
+            'status' => 'published',
             'video_type' => 'long',
+            'sort' => $sort,
             'limit' => 8,
             'offset' => 0,
-        ]));
+        ]);
 
         $totalVideos = $videoModel->countFiltered($baseFilters);
         $totalPages = max(1, (int)ceil($totalVideos / $limit));

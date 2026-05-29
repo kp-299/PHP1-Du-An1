@@ -2,6 +2,8 @@
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/log.php';
+
 require_once __DIR__ . '/../../models/Post.php';
 require_once __DIR__ . '/../../models/Video.php';
 require_once __DIR__ . '/../../models/WebSetting.php';
@@ -13,6 +15,8 @@ class ClientPostController extends BaseController
 
     public function index()
     {
+        createLog('view_posts_page');
+
         $postModel = new Post();
         $settingModel = new WebSetting();
         $cartModel = new Cart();
@@ -66,6 +70,8 @@ class ClientPostController extends BaseController
         $slug = trim($_GET['slug'] ?? '');
 
         if ($slug === '') {
+            createLog('view_post_detail_missing_slug');
+
             header('Location: index.php?area=client&controller=post&action=index');
             exit;
         }
@@ -80,11 +86,15 @@ class ClientPostController extends BaseController
         $post = $postModel->findBySlug($slug);
 
         if (!$post || ($post['status'] ?? '') !== 'published') {
+            createLog('view_post_detail_not_found');
+
             header('Location: index.php?area=client&controller=pages&action=error');
             exit;
         }
 
         $postModel->increaseView($post['id']);
+
+        createLog('view_post_detail_' . $post['id']);
 
         $relatedPosts = $postModel->getRelated($post['id'], 6);
         $latestVideos = $videoModel->getPublished(8);

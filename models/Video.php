@@ -34,7 +34,15 @@ class Video extends BaseModel
             $params['video_type'] = $filters['video_type'];
         }
 
-        $sql .= " ORDER BY v.id DESC";
+        $sort = $filters['sort'] ?? 'newest';
+
+        if ($sort === 'oldest') {
+            $sql .= " ORDER BY v.id ASC";
+        } elseif ($sort === 'view_desc') {
+            $sql .= " ORDER BY v.view_count DESC";
+        } else {
+            $sql .= " ORDER BY v.id DESC";
+        }
 
         if (isset($filters['limit'])) {
             $sql .= " LIMIT :limit OFFSET :offset";
@@ -47,13 +55,77 @@ class Video extends BaseModel
         }
 
         if (isset($filters['limit'])) {
-            $stmt->bindValue(':limit', (int) $filters['limit'], PDO::PARAM_INT);
-            $stmt->bindValue(':offset', (int) ($filters['offset'] ?? 0), PDO::PARAM_INT);
+            $stmt->bindValue(':limit', (int)$filters['limit'], PDO::PARAM_INT);
+            $stmt->bindValue(':offset', (int)($filters['offset'] ?? 0), PDO::PARAM_INT);
         }
 
         $stmt->execute();
 
         return $stmt->fetchAll();
+    }
+
+    public function countFiltered($filters = [])
+    {
+        $sql = "SELECT COUNT(*) AS total
+                FROM videos v
+                WHERE 1=1";
+
+        $params = [];
+
+        if (!empty($filters['keyword'])) {
+            $sql .= " AND (v.title LIKE :keyword OR v.description LIKE :keyword)";
+            $params['keyword'] = '%' . $filters['keyword'] . '%';
+        }
+
+        if (!empty($filters['status'])) {
+            $sql .= " AND v.status = :status";
+            $params['status'] = $filters['status'];
+        }
+
+        if (!empty($filters['video_type'])) {
+            $sql .= " AND v.video_type = :video_type";
+            $params['video_type'] = $filters['video_type'];
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        $row = $stmt->fetch();
+
+        return (int)($row['total'] ?? 0);
+    }
+
+    public function getPublished($limit = 10)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT v.*, u.name AS author_name
+             FROM videos v
+             LEFT JOIN users u ON v.author_id = u.id
+             WHERE v.status = 'published'
+             ORDER BY v.id DESC
+             LIMIT :limit"
+        );
+
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    public function find($id)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM videos
+             WHERE id = :id
+             LIMIT 1"
+        );
+
+        $stmt->execute([
+            'id' => $id,
+        ]);
+
+        return $stmt->fetch();
     }
 
     public function findBySlug($slug)
@@ -67,7 +139,7 @@ class Video extends BaseModel
         );
 
         $stmt->execute([
-            'slug' => $slug
+            'slug' => $slug,
         ]);
 
         return $stmt->fetch();
@@ -77,9 +149,9 @@ class Video extends BaseModel
     {
         $stmt = $this->db->prepare(
             "INSERT INTO videos 
-                (title, slug, video_type, thumbnail, video_file, video_url, description, duration, author_id, status)
+                (title, slug, video_type, thumbnail, video_file, video_url, description, duration, author_id, status, view_count, created_at, updated_at)
              VALUES 
-                (:title, :slug, :video_type, :thumbnail, :video_file, :video_url, :description, :duration, :author_id, :status)"
+                (:title, :slug, :video_type, :thumbnail, :video_file, :video_url, :description, :duration, :author_id, :status, 0, NOW(), NOW())"
         );
 
         $success = $stmt->execute([
@@ -95,11 +167,7 @@ class Video extends BaseModel
             'status' => $data['status'] ?? 'draft',
         ]);
 
-        if ($success) {
-            return $this->db->lastInsertId();
-        }
-
-        return false;
+        return $success ? $this->db->lastInsertId() : false;
     }
 
     public function update($id, $data)
@@ -115,7 +183,8 @@ class Video extends BaseModel
                 video_url = :video_url,
                 description = :description,
                 duration = :duration,
-                status = :status
+                status = :status,
+                updated_at = NOW()
              WHERE id = :id"
         );
 
@@ -133,93 +202,92 @@ class Video extends BaseModel
         ]);
     }
 
-    public function publish($id)
+    public function updateStatus($id, $status)
     {
         $stmt = $this->db->prepare(
-            "UPDATE videos SET status = 'published' WHERE id = :id"
+            "UPDATE videos
+             SET status = :status,
+                 updated_at = NOW()
+             WHERE id = :id"
         );
 
         return $stmt->execute([
-            'id' => $id
+            'id' => $id,
+            'status' => $status,
         ]);
+    }
+
+    public function publish($id)
+    {
+        return $this->updateStatus($id, 'published');
     }
 
     public function hide($id)
     {
-        $stmt = $this->db->prepare(
-            "UPDATE videos SET status = 'hidden' WHERE id = :id"
-        );
-
-        return $stmt->execute([
-            'id' => $id
-        ]);
+        return $this->updateStatus($id, 'hidden');
     }
 
     public function draft($id)
     {
+        return $this->updateStatus($id, 'draft');
+    }
+
+    public function delete($id)
+    {
         $stmt = $this->db->prepare(
-            "UPDATE videos SET status = 'draft' WHERE id = :id"
+            "DELETE FROM videos
+             WHERE id = :id"
         );
 
         return $stmt->execute([
-            'id' => $id
+            'id' => $id,
         ]);
     }
 
     public function increaseView($id)
     {
         $stmt = $this->db->prepare(
-            "UPDATE videos SET view_count = view_count + 1 WHERE id = :id"
+            "UPDATE videos
+             SET view_count = view_count + 1
+             WHERE id = :id"
         );
 
         return $stmt->execute([
-            'id' => $id
+            'id' => $id,
         ]);
     }
 
     public function countByStatus($status)
     {
         $stmt = $this->db->prepare(
-            "SELECT COUNT(*) AS total FROM videos WHERE status = :status"
+            "SELECT COUNT(*) AS total
+             FROM videos
+             WHERE status = :status"
         );
 
         $stmt->execute([
-            'status' => $status
+            'status' => $status,
         ]);
 
         $row = $stmt->fetch();
 
-        return (int) ($row['total'] ?? 0);
+        return (int)($row['total'] ?? 0);
     }
 
     public function countByType($type)
     {
         $stmt = $this->db->prepare(
-            "SELECT COUNT(*) AS total FROM videos WHERE video_type = :video_type"
+            "SELECT COUNT(*) AS total
+             FROM videos
+             WHERE video_type = :video_type"
         );
 
         $stmt->execute([
-            'video_type' => $type
+            'video_type' => $type,
         ]);
 
         $row = $stmt->fetch();
 
-        return (int) ($row['total'] ?? 0);
-    }
-
-    public function getPublished($limit = 10)
-    {
-        $stmt = $this->db->prepare(
-            "SELECT *
-             FROM videos
-             WHERE status = 'published'
-             ORDER BY id DESC
-             LIMIT :limit"
-        );
-
-        $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll();
+        return (int)($row['total'] ?? 0);
     }
 }

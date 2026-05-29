@@ -57,3 +57,8 @@ function guestOnly()
         exit;
     }
 }
+
+function currentUserId()
+{
+    return $_SESSION['user']['id'] ?? null;
+}

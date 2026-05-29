@@ -1,7 +1,16 @@
 <?php
+$settings = $settings ?? [];
+
 $siteName = $settings['site_name'] ?? 'Trái Cây Tươi';
+
+$homeHeroTitle = $settings['home_hero_title'] ?? 'Trái cây tươi ngon, giao nhanh mỗi ngày';
+$homeHeroSubtitle = $settings['home_hero_subtitle'] ?? 'Cửa hàng chuyên cung cấp trái cây, rau củ tươi sạch. Sản phẩm được cập nhật từ admin dashboard và hiển thị trực tiếp ra ngoài client.';
+
+$homeProductTitle = $settings['home_product_title'] ?? 'Sản phẩm nổi bật';
+$homeVideoTitle = $settings['home_video_title'] ?? 'Video mới';
+$homePostTitle = $settings['home_post_title'] ?? 'Bài viết mới';
+
 $homepageNotice = $settings['homepage_notice'] ?? 'Giảm giá trái cây tươi mỗi ngày';
-$banner = $settings['banner'] ?? '';
 
 $productsForHome = array_slice($activeProducts ?? $latestProducts ?? [], 0, 18);
 $shortVideosForHome = array_slice($shortVideos ?? [], 0, 12);
@@ -24,6 +33,19 @@ if (!function_exists('clientImageExists')) {
         return file_exists(__DIR__ . '/../../' . $cleanPath);
     }
 }
+
+if (!function_exists('settingJsonArray')) {
+    function settingJsonArray($settings, $key)
+    {
+        $value = $settings[$key] ?? '[]';
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+}
+
+$homeHeroBanners = settingJsonArray($settings, 'home_hero_banners');
+$homeBottomBanners = settingJsonArray($settings, 'home_bottom_banners');
 ?>
 
 <!-- Hero -->
@@ -37,17 +59,16 @@ if (!function_exists('clientImageExists')) {
             </span>
 
             <h2 class="text-3xl sm:text-4xl lg:text-6xl font-extrabold leading-tight text-slate-950">
-                Trái cây tươi ngon, giao nhanh mỗi ngày
+                <?= htmlspecialchars($homeHeroTitle) ?>
             </h2>
 
             <p class="text-slate-600 mt-4 sm:mt-5 text-base sm:text-lg leading-7 sm:leading-8 max-w-xl mx-auto sm:mx-0">
-                Cửa hàng chuyên cung cấp trái cây, rau củ tươi sạch. Sản phẩm được cập nhật từ admin dashboard và hiển
-                thị trực tiếp ra ngoài client.
+                <?= htmlspecialchars($homeHeroSubtitle) ?>
             </p>
 
             <div class="grid grid-cols-2 sm:flex gap-3 mt-6 sm:mt-8">
                 <a href="index.php?area=client&controller=product&action=index"
-                    class="btn btn-sm sm:btn-md bg-gradient-to-r from-green-500 to-lime-500 hover:from-green-600 hover:to-lime-600 border-0 text-white rounded-2xl">
+                    class="btn btn-sm sm:btn-md site-gradient-bg hover:opacity-90 border-0 text-white rounded-2xl">
                     Mua ngay
                 </a>
 
@@ -58,14 +79,43 @@ if (!function_exists('clientImageExists')) {
         </div>
 
         <div class="w-full">
-            <div class="carousel w-full rounded-3xl sm:rounded-[2rem] shadow-xl overflow-hidden">
-                <div id="hero-slide-1" class="carousel-item relative w-full">
-                    <?php if (!empty($banner)): ?>
-                        <img src="<?= htmlspecialchars($banner) ?>" class="w-full h-56 sm:h-80 lg:h-[460px] object-cover"
-                            alt="Banner">
-                    <?php else: ?>
+            <?php if (!empty($homeHeroBanners)): ?>
+                <div class="carousel w-full rounded-3xl sm:rounded-[2rem] shadow-xl overflow-hidden">
+                    <?php foreach ($homeHeroBanners as $index => $image): ?>
+                        <?php
+                        $currentSlide = 'home-hero-banner-' . ($index + 1);
+                        $prevSlide = 'home-hero-banner-' . ($index === 0 ? count($homeHeroBanners) : $index);
+                        $nextSlide = 'home-hero-banner-' . ($index + 2 > count($homeHeroBanners) ? 1 : $index + 2);
+                        ?>
+
+                        <div id="<?= $currentSlide ?>" class="carousel-item relative w-full">
+                            <img src="<?= htmlspecialchars($image) ?>" class="w-full h-56 sm:h-80 lg:h-[460px] object-cover"
+                                alt="Home banner">
+
+                            <div class="absolute inset-0 bg-black/15"></div>
+
+                            <div class="absolute left-6 right-6 bottom-6 text-white">
+                                <p class="text-sm font-bold uppercase tracking-widest text-white/80">
+                                    <?= htmlspecialchars($siteName) ?>
+                                </p>
+                                <h3 class="text-2xl sm:text-4xl font-extrabold mt-2">
+                                    <?= htmlspecialchars($homepageNotice) ?>
+                                </h3>
+                            </div>
+
+                            <div
+                                class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
+                                <a href="#<?= $prevSlide ?>" class="btn btn-xs sm:btn-md btn-circle">❮</a>
+                                <a href="#<?= $nextSlide ?>" class="btn btn-xs sm:btn-md btn-circle">❯</a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="carousel w-full rounded-3xl sm:rounded-[2rem] shadow-xl overflow-hidden">
+                    <div id="hero-slide-1" class="carousel-item relative w-full">
                         <div
-                            class="w-full h-56 sm:h-80 lg:h-[460px] bg-gradient-to-br from-green-500 to-lime-500 flex items-center justify-center text-white">
+                            class="w-full h-56 sm:h-80 lg:h-[460px] site-gradient-bg flex items-center justify-center text-white">
                             <div class="text-center px-6">
                                 <div class="text-5xl sm:text-7xl lg:text-8xl mb-4 sm:mb-5">🍎🍊🍇</div>
                                 <h3 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold">Fresh Fruit Sale</h3>
@@ -74,53 +124,53 @@ if (!function_exists('clientImageExists')) {
                                 </p>
                             </div>
                         </div>
-                    <?php endif; ?>
 
-                    <div
-                        class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
-                        <a href="#hero-slide-3" class="btn btn-xs sm:btn-md btn-circle">❮</a>
-                        <a href="#hero-slide-2" class="btn btn-xs sm:btn-md btn-circle">❯</a>
-                    </div>
-                </div>
-
-                <div id="hero-slide-2" class="carousel-item relative w-full">
-                    <div
-                        class="w-full h-56 sm:h-80 lg:h-[460px] bg-gradient-to-br from-orange-400 to-yellow-400 flex items-center justify-center text-white">
-                        <div class="text-center px-6">
-                            <div class="text-5xl sm:text-7xl lg:text-8xl mb-4 sm:mb-5">🥭🍍🍌</div>
-                            <h3 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold">Combo trái cây nhiệt đới</h3>
-                            <p class="mt-2 sm:mt-3 text-sm sm:text-base text-white/90">
-                                Ảnh demo banner, sau này thay bằng ảnh upload từ admin.
-                            </p>
+                        <div
+                            class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
+                            <a href="#hero-slide-3" class="btn btn-xs sm:btn-md btn-circle">❮</a>
+                            <a href="#hero-slide-2" class="btn btn-xs sm:btn-md btn-circle">❯</a>
                         </div>
                     </div>
 
-                    <div
-                        class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
-                        <a href="#hero-slide-1" class="btn btn-xs sm:btn-md btn-circle">❮</a>
-                        <a href="#hero-slide-3" class="btn btn-xs sm:btn-md btn-circle">❯</a>
-                    </div>
-                </div>
+                    <div id="hero-slide-2" class="carousel-item relative w-full">
+                        <div
+                            class="w-full h-56 sm:h-80 lg:h-[460px] bg-gradient-to-br from-orange-400 to-yellow-400 flex items-center justify-center text-white">
+                            <div class="text-center px-6">
+                                <div class="text-5xl sm:text-7xl lg:text-8xl mb-4 sm:mb-5">🥭🍍🍌</div>
+                                <h3 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold">Combo trái cây nhiệt đới</h3>
+                                <p class="mt-2 sm:mt-3 text-sm sm:text-base text-white/90">
+                                    Ảnh demo banner, sau này thay bằng ảnh upload từ admin.
+                                </p>
+                            </div>
+                        </div>
 
-                <div id="hero-slide-3" class="carousel-item relative w-full">
-                    <div
-                        class="w-full h-56 sm:h-80 lg:h-[460px] bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white">
-                        <div class="text-center px-6">
-                            <div class="text-5xl sm:text-7xl lg:text-8xl mb-4 sm:mb-5">🍓🍒🍉</div>
-                            <h3 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold">Ưu đãi cuối tuần</h3>
-                            <p class="mt-2 sm:mt-3 text-sm sm:text-base text-white/90">
-                                Carousel dùng DaisyUI, không cần JS.
-                            </p>
+                        <div
+                            class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
+                            <a href="#hero-slide-1" class="btn btn-xs sm:btn-md btn-circle">❮</a>
+                            <a href="#hero-slide-3" class="btn btn-xs sm:btn-md btn-circle">❯</a>
                         </div>
                     </div>
 
-                    <div
-                        class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
-                        <a href="#hero-slide-2" class="btn btn-xs sm:btn-md btn-circle">❮</a>
-                        <a href="#hero-slide-1" class="btn btn-xs sm:btn-md btn-circle">❯</a>
+                    <div id="hero-slide-3" class="carousel-item relative w-full">
+                        <div
+                            class="w-full h-56 sm:h-80 lg:h-[460px] bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white">
+                            <div class="text-center px-6">
+                                <div class="text-5xl sm:text-7xl lg:text-8xl mb-4 sm:mb-5">🍓🍒🍉</div>
+                                <h3 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold">Ưu đãi cuối tuần</h3>
+                                <p class="mt-2 sm:mt-3 text-sm sm:text-base text-white/90">
+                                    Carousel dùng DaisyUI, không cần JS.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
+                            <a href="#hero-slide-2" class="btn btn-xs sm:btn-md btn-circle">❮</a>
+                            <a href="#hero-slide-1" class="btn btn-xs sm:btn-md btn-circle">❯</a>
+                        </div>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
 </section>
@@ -130,7 +180,7 @@ if (!function_exists('clientImageExists')) {
     <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-950">
-                Sản phẩm nổi bật
+                <?= htmlspecialchars($homeProductTitle) ?>
             </h2>
 
             <p class="text-slate-500 mt-2 text-sm sm:text-base">
@@ -149,13 +199,12 @@ if (!function_exists('clientImageExists')) {
             <?php foreach ($productsForHome as $product): ?>
                 <?php
                 $productDetailUrl = 'index.php?area=client&controller=product&action=detail&id=' . urlencode($product['id']);
-                $isOutOfStock = isset($product['stock']) && (int) $product['stock'] <= 0;
+                $isOutOfStock = isset($product['stock']) && (int)$product['stock'] <= 0;
                 $hasSalePrice = !empty($product['sale_price']) && $product['sale_price'] > 0;
                 ?>
 
                 <div
                     class="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:-translate-y-1 hover:shadow-md transition">
-                    <!-- Product image -->
                     <a href="<?= $productDetailUrl ?>" class="block">
                         <div class="h-28 sm:h-32 bg-green-50 relative overflow-hidden">
                             <?php if (clientImageExists($product['image'] ?? '')): ?>
@@ -182,7 +231,6 @@ if (!function_exists('clientImageExists')) {
                         </div>
                     </a>
 
-                    <!-- Product info -->
                     <div class="p-2.5 sm:p-3">
                         <a href="<?= $productDetailUrl ?>" class="block">
                             <h3
@@ -215,7 +263,6 @@ if (!function_exists('clientImageExists')) {
                             <?php endif; ?>
                         </div>
 
-                        <!-- Actions -->
                         <div class="grid grid-cols-1 gap-2 mt-3">
                             <a href="<?= $productDetailUrl ?>" class="btn btn-xs btn-outline rounded-xl w-full">
                                 Xem chi tiết
@@ -248,16 +295,19 @@ if (!function_exists('clientImageExists')) {
 <!-- Videos -->
 <section class="bg-slate-950 text-white py-12 sm:py-16">
     <div class="max-w-7xl mx-auto px-3 sm:px-4">
-        <div class="flex items-end justify-between gap-4 mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
             <div>
-                <h2 class="text-3xl font-extrabold">Video ngắn</h2>
+                <h2 class="text-2xl sm:text-3xl font-extrabold">
+                    <?= htmlspecialchars($homeVideoTitle) ?>
+                </h2>
+
                 <p class="text-slate-400 mt-2">
-                    Hiển thị tối đa 12 video short từ admin.
+                    Hiển thị video short và long từ admin.
                 </p>
             </div>
 
             <a href="index.php?area=client&controller=video&action=index"
-                class="btn btn-outline border-white text-white hover:bg-white hover:text-slate-950 rounded-2xl">
+                class="btn btn-sm sm:btn-md btn-outline border-white text-white hover:bg-white hover:text-slate-950 rounded-2xl w-fit">
                 Xem tất cả
             </a>
         </div>
@@ -265,10 +315,10 @@ if (!function_exists('clientImageExists')) {
         <?php if (!empty($shortVideosForHome)): ?>
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                 <?php foreach ($shortVideosForHome as $video): ?>
-                    <a href="index.php?area=client&controller=video&action=detail&slug=<?= urlencode($video['slug']) ?>"
+                    <a href="index.php?area=client&controller=video&action=index"
                         class="group rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:-translate-y-1 transition">
                         <div class="aspect-[9/14] bg-pink-950 relative">
-                            <?php if (!empty($video['thumbnail'])): ?>
+                            <?php if (clientImageExists($video['thumbnail'] ?? '')): ?>
                                 <img src="<?= htmlspecialchars($video['thumbnail']) ?>"
                                     alt="<?= htmlspecialchars($video['title']) ?>" class="w-full h-full object-cover">
                             <?php else: ?>
@@ -301,7 +351,7 @@ if (!function_exists('clientImageExists')) {
         <div class="mt-14">
             <div class="flex items-end justify-between gap-4 mb-6">
                 <div>
-                    <h2 class="text-3xl font-extrabold">Video dài</h2>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold">Video dài</h2>
                     <p class="text-slate-400 mt-2">
                         Dạng slide carousel cho video long.
                     </p>
@@ -320,7 +370,7 @@ if (!function_exists('clientImageExists')) {
                         <div id="<?= $currentSlide ?>" class="carousel-item relative w-full">
                             <div class="w-full grid grid-cols-1 lg:grid-cols-2 bg-white/5 border border-white/10">
                                 <div class="h-64 sm:h-80 lg:h-[420px] bg-slate-900">
-                                    <?php if (!empty($video['thumbnail'])): ?>
+                                    <?php if (clientImageExists($video['thumbnail'] ?? '')): ?>
                                         <img src="<?= htmlspecialchars($video['thumbnail']) ?>"
                                             alt="<?= htmlspecialchars($video['title']) ?>" class="w-full h-full object-cover">
                                     <?php else: ?>
@@ -343,7 +393,7 @@ if (!function_exists('clientImageExists')) {
                                         <?= htmlspecialchars($video['description'] ?? 'Video dài giới thiệu nội dung từ admin.') ?>
                                     </p>
 
-                                    <a href="index.php?area=client&controller=video&action=detail&slug=<?= urlencode($video['slug']) ?>"
+                                    <a href="index.php?area=client&controller=video&action=index"
                                         class="btn bg-white text-slate-950 border-0 hover:bg-slate-100 rounded-2xl w-fit mt-6">
                                         Xem video
                                     </a>
@@ -369,15 +419,19 @@ if (!function_exists('clientImageExists')) {
 
 <!-- Posts -->
 <section class="max-w-7xl mx-auto px-3 sm:px-4 py-12 sm:py-16">
-    <div class="flex items-end justify-between gap-4 mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
         <div>
-            <h2 class="text-3xl font-extrabold text-slate-950">Bài viết mới</h2>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-950">
+                <?= htmlspecialchars($homePostTitle) ?>
+            </h2>
+
             <p class="text-slate-500 mt-2">
                 Hiển thị 6 bài viết published từ admin.
             </p>
         </div>
 
-        <a href="index.php?area=client&controller=post&action=index" class="btn btn-outline rounded-2xl">
+        <a href="index.php?area=client&controller=post&action=index"
+            class="btn btn-sm sm:btn-md btn-outline rounded-2xl w-fit">
             Xem tất cả
         </a>
     </div>
@@ -389,7 +443,7 @@ if (!function_exists('clientImageExists')) {
                     class="bg-white border border-slate-200 rounded-3xl overflow-hidden hover:-translate-y-1 hover:shadow-md transition">
                     <a href="index.php?area=client&controller=post&action=detail&slug=<?= urlencode($post['slug']) ?>">
                         <div class="h-52 bg-orange-50">
-                            <?php if (!empty($post['thumbnail'])): ?>
+                            <?php if (clientImageExists($post['thumbnail'] ?? '')): ?>
                                 <img src="<?= htmlspecialchars($post['thumbnail']) ?>" alt="<?= htmlspecialchars($post['title']) ?>"
                                     class="w-full h-full object-cover">
                             <?php else: ?>
@@ -401,9 +455,11 @@ if (!function_exists('clientImageExists')) {
                     </a>
 
                     <div class="p-5">
-                        <h3 class="text-lg font-extrabold leading-6 h-12 overflow-hidden">
-                            <?= htmlspecialchars($post['title']) ?>
-                        </h3>
+                        <a href="index.php?area=client&controller=post&action=detail&slug=<?= urlencode($post['slug']) ?>">
+                            <h3 class="text-lg font-extrabold leading-6 h-12 overflow-hidden hover:text-green-600 transition">
+                                <?= htmlspecialchars($post['title']) ?>
+                            </h3>
+                        </a>
 
                         <p class="text-sm text-slate-500 mt-3 leading-6 h-18 overflow-hidden">
                             <?= htmlspecialchars($post['summary'] ?? '') ?>
@@ -432,56 +488,88 @@ if (!function_exists('clientImageExists')) {
 
 <!-- Promo carousel -->
 <section class="max-w-7xl mx-auto px-3 sm:px-4 py-10">
-    <div class="carousel w-full rounded-3xl sm:rounded-[2rem] overflow-hidden shadow-xl">
-        <div id="promo-1" class="carousel-item relative w-full">
-            <div
-                class="w-full h-56 sm:h-72 bg-gradient-to-r from-green-500 to-lime-500 flex items-center justify-center text-white text-center px-8">
-                <div>
-                    <div class="text-5xl sm:text-6xl mb-4">🥝🍏🍐</div>
-                    <h3 class="text-2xl sm:text-4xl font-extrabold">Giảm 20% trái cây xanh</h3>
-                    <p class="mt-3 text-white/80">Banner quảng cáo demo, sau này thay bằng ảnh thật.</p>
+    <?php if (!empty($homeBottomBanners)): ?>
+        <div class="carousel w-full rounded-3xl sm:rounded-[2rem] overflow-hidden shadow-xl">
+            <?php foreach ($homeBottomBanners as $index => $image): ?>
+                <?php
+                $currentSlide = 'home-bottom-banner-' . ($index + 1);
+                $prevSlide = 'home-bottom-banner-' . ($index === 0 ? count($homeBottomBanners) : $index);
+                $nextSlide = 'home-bottom-banner-' . ($index + 2 > count($homeBottomBanners) ? 1 : $index + 2);
+                ?>
+
+                <div id="<?= $currentSlide ?>" class="carousel-item relative w-full">
+                    <img src="<?= htmlspecialchars($image) ?>" class="w-full h-56 sm:h-72 object-cover" alt="Promotion banner">
+
+                    <div class="absolute inset-0 bg-black/25"></div>
+
+                    <div class="absolute inset-0 flex items-center justify-center text-white text-center px-8">
+                        <div>
+                            <h3 class="text-2xl sm:text-4xl font-extrabold">
+                                <?= htmlspecialchars($homepageNotice) ?>
+                            </h3>
+                        </div>
+                    </div>
+
+                    <div
+                        class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
+                        <a href="#<?= $prevSlide ?>" class="btn btn-xs sm:btn-md btn-circle">❮</a>
+                        <a href="#<?= $nextSlide ?>" class="btn btn-xs sm:btn-md btn-circle">❯</a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php else: ?>
+        <div class="carousel w-full rounded-3xl sm:rounded-[2rem] overflow-hidden shadow-xl">
+            <div id="promo-1" class="carousel-item relative w-full">
+                <div
+                    class="w-full h-56 sm:h-72 site-gradient-bg flex items-center justify-center text-white text-center px-8">
+                    <div>
+                        <div class="text-5xl sm:text-6xl mb-4">🥝🍏🍐</div>
+                        <h3 class="text-2xl sm:text-4xl font-extrabold">Giảm 20% trái cây xanh</h3>
+                        <p class="mt-3 text-white/80">Banner quảng cáo demo, sau này thay bằng ảnh thật.</p>
+                    </div>
+                </div>
+
+                <div
+                    class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
+                    <a href="#promo-3" class="btn btn-xs sm:btn-md btn-circle">❮</a>
+                    <a href="#promo-2" class="btn btn-xs sm:btn-md btn-circle">❯</a>
                 </div>
             </div>
 
-            <div
-                class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
-                <a href="#promo-3" class="btn btn-xs sm:btn-md btn-circle">❮</a>
-                <a href="#promo-2" class="btn btn-xs sm:btn-md btn-circle">❯</a>
-            </div>
-        </div>
+            <div id="promo-2" class="carousel-item relative w-full">
+                <div
+                    class="w-full h-56 sm:h-72 bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center text-white text-center px-8">
+                    <div>
+                        <div class="text-5xl sm:text-6xl mb-4">🍊🍋🥭</div>
+                        <h3 class="text-2xl sm:text-4xl font-extrabold">Combo nhiệt đới mỗi ngày</h3>
+                        <p class="mt-3 text-white/80">Ảnh demo promotion section.</p>
+                    </div>
+                </div>
 
-        <div id="promo-2" class="carousel-item relative w-full">
-            <div
-                class="w-full h-56 sm:h-72 bg-gradient-to-r from-orange-400 to-yellow-400 flex items-center justify-center text-white text-center px-8">
-                <div>
-                    <div class="text-5xl sm:text-6xl mb-4">🍊🍋🥭</div>
-                    <h3 class="text-2xl sm:text-4xl font-extrabold">Combo nhiệt đới mỗi ngày</h3>
-                    <p class="mt-3 text-white/80">Ảnh demo promotion section.</p>
+                <div
+                    class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
+                    <a href="#promo-1" class="btn btn-xs sm:btn-md btn-circle">❮</a>
+                    <a href="#promo-3" class="btn btn-xs sm:btn-md btn-circle">❯</a>
                 </div>
             </div>
 
-            <div
-                class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
-                <a href="#promo-1" class="btn btn-xs sm:btn-md btn-circle">❮</a>
-                <a href="#promo-3" class="btn btn-xs sm:btn-md btn-circle">❯</a>
-            </div>
-        </div>
+            <div id="promo-3" class="carousel-item relative w-full">
+                <div
+                    class="w-full h-56 sm:h-72 bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white text-center px-8">
+                    <div>
+                        <div class="text-5xl sm:text-6xl mb-4">🍓🍒🍉</div>
+                        <h3 class="text-2xl sm:text-4xl font-extrabold">Ưu đãi cuối tuần</h3>
+                        <p class="mt-3 text-white/80">Carousel DaisyUI không cần JS.</p>
+                    </div>
+                </div>
 
-        <div id="promo-3" class="carousel-item relative w-full">
-            <div
-                class="w-full h-56 sm:h-72 bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white text-center px-8">
-                <div>
-                    <div class="text-5xl sm:text-6xl mb-4">🍓🍒🍉</div>
-                    <h3 class="text-2xl sm:text-4xl font-extrabold">Ưu đãi cuối tuần</h3>
-                    <p class="mt-3 text-white/80">Carousel DaisyUI không cần JS.</p>
+                <div
+                    class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
+                    <a href="#promo-2" class="btn btn-xs sm:btn-md btn-circle">❮</a>
+                    <a href="#promo-1" class="btn btn-xs sm:btn-md btn-circle">❯</a>
                 </div>
             </div>
-
-            <div
-                class="absolute flex justify-between transform -translate-y-1/2 left-3 right-3 sm:left-5 sm:right-5 top-1/2">
-                <a href="#promo-2" class="btn btn-xs sm:btn-md btn-circle">❮</a>
-                <a href="#promo-1" class="btn btn-xs sm:btn-md btn-circle">❯</a>
-            </div>
         </div>
-    </div>
+    <?php endif; ?>
 </section>

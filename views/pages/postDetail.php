@@ -1,8 +1,12 @@
 <?php
+$settings = $settings ?? [];
+
 if (!function_exists('clientImageExists')) {
     function clientImageExists($path)
     {
-        if (empty($path)) return false;
+        if (empty($path)) {
+            return false;
+        }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return true;
@@ -14,10 +18,23 @@ if (!function_exists('clientImageExists')) {
 ?>
 
 <section class="max-w-5xl mx-auto px-3 sm:px-4 py-10 sm:py-14">
-    <div class="mb-6">
-        <a href="index.php?area=client&controller=post&action=index" class="btn btn-outline rounded-2xl">
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <a href="index.php?area=client&controller=post&action=index"
+            class="btn btn-sm sm:btn-md btn-outline rounded-2xl w-fit">
             ← Quay lại bài viết
         </a>
+
+        <div class="text-sm breadcrumbs text-slate-500">
+            <ul>
+                <li>
+                    <a href="index.php?area=client&controller=pages&action=home">Trang chủ</a>
+                </li>
+                <li>
+                    <a href="index.php?area=client&controller=post&action=index">Bài viết</a>
+                </li>
+                <li>Chi tiết</li>
+            </ul>
+        </div>
     </div>
 
     <article class="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
@@ -30,6 +47,12 @@ if (!function_exists('clientImageExists')) {
                 <span class="text-sm text-slate-400">
                     👁 <?= htmlspecialchars($post['view_count'] ?? 0) ?>
                 </span>
+
+                <?php if (!empty($post['author_name'])): ?>
+                    <span class="text-sm text-slate-400">
+                        ✍ <?= htmlspecialchars($post['author_name']) ?>
+                    </span>
+                <?php endif; ?>
 
                 <?php if (!empty($post['created_at'])): ?>
                     <span class="text-sm text-slate-400">
@@ -72,13 +95,14 @@ if (!function_exists('clientImageExists')) {
 
 <!-- Related posts -->
 <section class="max-w-7xl mx-auto px-3 sm:px-4 py-10">
-    <div class="flex items-end justify-between gap-4 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
-            <h2 class="text-3xl font-extrabold text-slate-950">Bài viết liên quan</h2>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-950">Bài viết liên quan</h2>
             <p class="text-slate-500 mt-2">Một số bài viết khác bạn có thể đọc.</p>
         </div>
 
-        <a href="index.php?area=client&controller=post&action=index" class="btn btn-outline rounded-2xl">
+        <a href="index.php?area=client&controller=post&action=index"
+            class="btn btn-sm sm:btn-md btn-outline rounded-2xl w-fit">
             Xem tất cả
         </a>
     </div>
@@ -86,13 +110,17 @@ if (!function_exists('clientImageExists')) {
     <?php if (!empty($relatedPosts)): ?>
         <div class="carousel carousel-center w-full space-x-4 rounded-box">
             <?php foreach ($relatedPosts as $item): ?>
+                <?php
+                $relatedPostUrl = 'index.php?area=client&controller=post&action=detail&slug=' . urlencode($item['slug']);
+                ?>
+
                 <div class="carousel-item w-72 sm:w-80">
                     <article class="bg-white border border-slate-200 rounded-3xl overflow-hidden w-full">
-                        <a href="index.php?area=client&controller=post&action=detail&slug=<?= urlencode($item['slug']) ?>">
+                        <a href="<?= $relatedPostUrl ?>">
                             <div class="h-44 bg-orange-50">
                                 <?php if (clientImageExists($item['thumbnail'] ?? '')): ?>
                                     <img src="<?= htmlspecialchars($item['thumbnail']) ?>" class="w-full h-full object-cover"
-                                        alt="">
+                                        alt="<?= htmlspecialchars($item['title']) ?>">
                                 <?php else: ?>
                                     <div class="w-full h-full flex items-center justify-center text-5xl">📝</div>
                                 <?php endif; ?>
@@ -100,12 +128,13 @@ if (!function_exists('clientImageExists')) {
                         </a>
 
                         <div class="p-5">
-                            <h3 class="font-extrabold leading-6 h-12 overflow-hidden">
-                                <?= htmlspecialchars($item['title']) ?>
-                            </h3>
+                            <a href="<?= $relatedPostUrl ?>">
+                                <h3 class="font-extrabold leading-6 h-12 overflow-hidden hover:text-green-600 transition">
+                                    <?= htmlspecialchars($item['title']) ?>
+                                </h3>
+                            </a>
 
-                            <a href="index.php?area=client&controller=post&action=detail&slug=<?= urlencode($item['slug']) ?>"
-                                class="btn btn-sm btn-outline rounded-xl mt-4">
+                            <a href="<?= $relatedPostUrl ?>" class="btn btn-sm btn-outline rounded-xl mt-4">
                                 Đọc thêm
                             </a>
                         </div>
@@ -123,7 +152,7 @@ if (!function_exists('clientImageExists')) {
 <!-- Latest videos slider -->
 <section class="max-w-7xl mx-auto px-3 sm:px-4 py-10">
     <div class="mb-6">
-        <h2 class="text-3xl font-extrabold text-slate-950">Video mới</h2>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-950">Video mới</h2>
         <p class="text-slate-500 mt-2">Video gợi ý sau khi đọc bài viết.</p>
     </div>
 
@@ -135,14 +164,19 @@ if (!function_exists('clientImageExists')) {
                         class="block bg-slate-950 text-white rounded-3xl overflow-hidden w-full">
                         <div class="aspect-video bg-slate-900">
                             <?php if (clientImageExists($video['thumbnail'] ?? '')): ?>
-                                <img src="<?= htmlspecialchars($video['thumbnail']) ?>" class="w-full h-full object-cover" alt="">
+                                <img src="<?= htmlspecialchars($video['thumbnail']) ?>" class="w-full h-full object-cover"
+                                    alt="<?= htmlspecialchars($video['title']) ?>">
                             <?php else: ?>
                                 <div class="w-full h-full flex items-center justify-center text-5xl">🎬</div>
                             <?php endif; ?>
                         </div>
 
                         <div class="p-4">
-                            <h3 class="font-bold leading-5 h-10 overflow-hidden">
+                            <span class="px-2 py-1 rounded-full bg-white/10 text-white text-[10px] font-bold">
+                                <?= strtoupper(htmlspecialchars($video['video_type'] ?? 'video')) ?>
+                            </span>
+
+                            <h3 class="font-bold leading-5 h-10 overflow-hidden mt-2">
                                 <?= htmlspecialchars($video['title']) ?>
                             </h3>
                         </div>

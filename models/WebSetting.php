@@ -1,10 +1,5 @@
 <?php
 
-/**
- * FILE: models/WebSetting.php
- * CHỨC NĂNG: Model xử lý bảng web_settings
- */
-
 require_once __DIR__ . '/BaseModel.php';
 
 class WebSetting extends BaseModel
@@ -12,20 +7,12 @@ class WebSetting extends BaseModel
     public function __construct()
     {
         parent::__construct();
-
         $this->table = 'web_settings';
     }
 
     public function getAllSettings()
     {
-        $sql = "
-            SELECT *
-            FROM web_settings
-            ORDER BY id ASC
-        ";
-
-        $stmt = $this->db->query($sql);
-
+        $stmt = $this->db->query("SELECT * FROM web_settings ORDER BY id ASC");
         return $stmt->fetchAll();
     }
 
@@ -42,94 +29,96 @@ class WebSetting extends BaseModel
         return $result;
     }
 
-    public function getValue($key)
+    public function getValue($key, $default = null)
     {
-        $sql = "
-            SELECT setting_value
-            FROM web_settings
-            WHERE setting_key = :setting_key
-            LIMIT 1
-        ";
-
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare(
+            "SELECT setting_value 
+             FROM web_settings 
+             WHERE setting_key = :key 
+             LIMIT 1"
+        );
 
         $stmt->execute([
-            'setting_key' => $key
+            'key' => $key,
         ]);
 
-        $result = $stmt->fetch();
+        $row = $stmt->fetch();
 
-        if (!$result) {
-            return null;
-        }
-
-        return $result['setting_value'];
+        return $row ? $row['setting_value'] : $default;
     }
 
-    public function updateSetting($key, $value)
+    public function getJsonValue($key)
     {
-        $sql = "
-            UPDATE web_settings
-            SET 
-                setting_value = :setting_value,
-                updated_at = NOW()
-            WHERE setting_key = :setting_key
-        ";
+        $value = $this->getValue($key, '[]');
 
-        $stmt = $this->db->prepare($sql);
+        $decoded = json_decode($value, true);
 
-        return $stmt->execute([
-            'setting_key' => $key,
-            'setting_value' => $value
-        ]);
+        return is_array($decoded) ? $decoded : [];
     }
 
-    public function createOrUpdate($key, $value, $type = 'text')
+    public function updateSetting($key, $value, $type = 'text')
     {
-        $currentValue = $this->getValue($key);
-
-        if ($currentValue !== null) {
-            return $this->updateSetting($key, $value);
-        }
-
-        $sql = "
-            INSERT INTO web_settings (
-                setting_key,
-                setting_value,
-                type
-            )
-            VALUES (
-                :setting_key,
-                :setting_value,
-                :type
-            )
-        ";
-
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare(
+            "INSERT INTO web_settings (setting_key, setting_value, type, updated_at)
+             VALUES (:setting_key, :setting_value, :type, NOW())
+             ON DUPLICATE KEY UPDATE
+                setting_value = VALUES(setting_value),
+                type = VALUES(type),
+                updated_at = NOW()"
+        );
 
         return $stmt->execute([
             'setting_key' => $key,
             'setting_value' => $value,
-            'type' => $type
+            'type' => $type,
         ]);
     }
 
     public function updateMany($settings)
     {
         try {
-            $this->beginTransaction();
+            $this->db->beginTransaction();
 
-            foreach ($settings as $key => $value) {
-                $this->createOrUpdate($key, $value);
+            foreach ($settings as $key => $item) {
+                $value = $item['value'] ?? '';
+                $type = $item['type'] ?? 'text';
+
+                $this->updateSetting($key, $value, $type);
             }
 
-            $this->commit();
+            $this->db->commit();
 
             return true;
         } catch (Exception $e) {
-            $this->rollback();
-
+            $this->db->rollBack();
             return false;
         }
+    }
+
+    public function appendImages($key, $images, $max = 8)
+    {
+        $current = $this->getJsonValue($key);
+
+        foreach ($images as $image) {
+            if (!empty($image)) {
+                $current[] = $image;
+            }
+        }
+
+        $current = array_values(array_unique($current));
+        $current = array_slice($current, 0, $max);
+
+        return $this->updateSetting($key, json_encode($current, JSON_UNESCAPED_UNICODE), 'json');
+    }
+
+    public function removeImageFromJson($key, $image)
+    {
+        $current = $this->getJsonValue($key);
+
+        $current = array_values(array_filter($current, function ($item) use ($image) {
+            return $item !== $image;
+        }));
+
+        return $this->updateSetting($key, json_encode($current, JSON_UNESCAPED_UNICODE), 'json');
     }
 }

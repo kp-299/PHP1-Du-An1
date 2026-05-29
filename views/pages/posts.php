@@ -1,22 +1,28 @@
 <?php
-function postPageUrl($filters, $page)
-{
-    $query = [
-        'area' => 'client',
-        'controller' => 'post',
-        'action' => 'index',
-        'keyword' => $filters['keyword'] ?? '',
-        'sort' => $filters['sort'] ?? 'newest',
-        'page' => $page,
-    ];
+$settings = $settings ?? [];
 
-    return 'index.php?' . http_build_query($query);
+if (!function_exists('postPageUrl')) {
+    function postPageUrl($filters, $page)
+    {
+        $query = [
+            'area' => 'client',
+            'controller' => 'post',
+            'action' => 'index',
+            'keyword' => $filters['keyword'] ?? '',
+            'sort' => $filters['sort'] ?? 'newest',
+            'page' => $page,
+        ];
+
+        return 'index.php?' . http_build_query($query);
+    }
 }
 
 if (!function_exists('clientImageExists')) {
     function clientImageExists($path)
     {
-        if (empty($path)) return false;
+        if (empty($path)) {
+            return false;
+        }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return true;
@@ -25,6 +31,12 @@ if (!function_exists('clientImageExists')) {
         return file_exists(__DIR__ . '/../../' . ltrim($path, '/'));
     }
 }
+
+$postHeaderBanner = $settings['post_header_banner'] ?? '';
+
+$postHeroTitle = $settings['post_hero_title'] ?? 'Bài viết, mẹo chọn trái cây và dinh dưỡng';
+$postHeroSubtitle = $settings['post_hero_subtitle'] ?? 'Tất cả bài viết được quản lý từ admin dashboard. Bạn có thể tìm kiếm, sắp xếp và đọc chi tiết từng bài viết.';
+$postSectionTitle = $settings['post_section_title'] ?? 'Tất cả bài viết';
 ?>
 
 <!-- Hero -->
@@ -38,22 +50,37 @@ if (!function_exists('clientImageExists')) {
                     </span>
 
                     <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-950 leading-tight">
-                        Bài viết, mẹo chọn trái cây và dinh dưỡng
+                        <?= htmlspecialchars($postHeroTitle) ?>
                     </h1>
 
                     <p class="text-slate-500 mt-5 leading-7">
-                        Tất cả bài viết được quản lý từ admin dashboard. Bạn có thể tìm kiếm, sắp xếp và đọc chi tiết
-                        từng bài viết.
+                        <?= htmlspecialchars($postHeroSubtitle) ?>
                     </p>
+
+                    <div class="mt-7">
+                        <a href="#post-list" class="btn site-gradient-bg border-0 text-white rounded-2xl">
+                            Xem bài viết
+                        </a>
+                    </div>
                 </div>
 
-                <div
-                    class="min-h-64 bg-gradient-to-br from-orange-400 to-yellow-400 flex items-center justify-center text-white">
-                    <div class="text-center px-6">
-                        <div class="text-7xl sm:text-8xl mb-4">📝🍊</div>
-                        <h2 class="text-3xl sm:text-4xl font-extrabold">Fruit Blog</h2>
-                        <p class="text-white/80 mt-3">Kiến thức nhỏ, lợi ích lớn.</p>
-                    </div>
+                <div class="min-h-64 lg:min-h-full relative overflow-hidden">
+                    <?php if (clientImageExists($postHeaderBanner)): ?>
+                        <img src="<?= htmlspecialchars($postHeaderBanner) ?>" alt="Post header"
+                            class="w-full h-full min-h-64 object-cover">
+                        <div class="absolute inset-0 bg-black/25"></div>
+
+
+                    <?php else: ?>
+                        <div
+                            class="w-full h-full min-h-64 bg-gradient-to-br from-orange-400 to-yellow-400 flex items-center justify-center text-white">
+                            <div class="text-center px-6">
+                                <div class="text-7xl sm:text-8xl mb-4">📝🍊</div>
+                                <h2 class="text-3xl sm:text-4xl font-extrabold">Fruit Blog</h2>
+                                <p class="text-white/80 mt-3">Kiến thức nhỏ, lợi ích lớn.</p>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -61,15 +88,16 @@ if (!function_exists('clientImageExists')) {
 </section>
 
 <!-- Content -->
-<section class="max-w-7xl mx-auto px-3 sm:px-4 py-10 sm:py-14">
+<section id="post-list" class="max-w-7xl mx-auto px-3 sm:px-4 py-10 sm:py-14">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <!-- Main -->
         <div class="lg:col-span-8 xl:col-span-9">
             <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 mb-6">
                 <div>
                     <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-950">
-                        Tất cả bài viết
+                        <?= htmlspecialchars($postSectionTitle) ?>
                     </h2>
+
                     <p class="text-slate-500 mt-2">
                         Tìm thấy <?= htmlspecialchars($totalPosts ?? count($posts ?? [])) ?> bài viết.
                     </p>
@@ -84,12 +112,15 @@ if (!function_exists('clientImageExists')) {
                         placeholder="Tìm bài viết..." value="<?= htmlspecialchars($filters['keyword'] ?? '') ?>">
 
                     <select name="sort" class="select select-bordered rounded-2xl w-full">
-                        <option value="newest" <?= ($filters['sort'] ?? '') === 'newest' ? 'selected' : '' ?>>Mới nhất
+                        <option value="newest" <?= ($filters['sort'] ?? '') === 'newest' ? 'selected' : '' ?>>
+                            Mới nhất
                         </option>
-                        <option value="oldest" <?= ($filters['sort'] ?? '') === 'oldest' ? 'selected' : '' ?>>Cũ nhất
+                        <option value="oldest" <?= ($filters['sort'] ?? '') === 'oldest' ? 'selected' : '' ?>>
+                            Cũ nhất
                         </option>
-                        <option value="view_desc" <?= ($filters['sort'] ?? '') === 'view_desc' ? 'selected' : '' ?>>Xem
-                            nhiều</option>
+                        <option value="view_desc" <?= ($filters['sort'] ?? '') === 'view_desc' ? 'selected' : '' ?>>
+                            Xem nhiều
+                        </option>
                     </select>
 
                     <button class="btn bg-slate-900 hover:bg-slate-800 border-0 text-white rounded-2xl">
@@ -101,10 +132,13 @@ if (!function_exists('clientImageExists')) {
             <?php if (!empty($posts)): ?>
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                     <?php foreach ($posts as $post): ?>
+                        <?php
+                        $postDetailUrl = 'index.php?area=client&controller=post&action=detail&slug=' . urlencode($post['slug']);
+                        ?>
+
                         <article
                             class="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:-translate-y-1 hover:shadow-md transition">
-                            <a href="index.php?area=client&controller=post&action=detail&slug=<?= urlencode($post['slug']) ?>"
-                                class="block">
+                            <a href="<?= $postDetailUrl ?>" class="block">
                                 <div class="h-52 bg-orange-50 overflow-hidden">
                                     <?php if (clientImageExists($post['thumbnail'] ?? '')): ?>
                                         <img src="<?= htmlspecialchars($post['thumbnail']) ?>"
@@ -119,8 +153,7 @@ if (!function_exists('clientImageExists')) {
                             </a>
 
                             <div class="p-5">
-                                <a
-                                    href="index.php?area=client&controller=post&action=detail&slug=<?= urlencode($post['slug']) ?>">
+                                <a href="<?= $postDetailUrl ?>">
                                     <h3
                                         class="text-lg font-extrabold leading-6 min-h-12 max-h-12 overflow-hidden hover:text-green-600 transition">
                                         <?= htmlspecialchars($post['title']) ?>
@@ -136,8 +169,7 @@ if (!function_exists('clientImageExists')) {
                                         👁 <?= htmlspecialchars($post['view_count'] ?? 0) ?>
                                     </span>
 
-                                    <a href="index.php?area=client&controller=post&action=detail&slug=<?= urlencode($post['slug']) ?>"
-                                        class="btn btn-sm btn-outline rounded-xl">
+                                    <a href="<?= $postDetailUrl ?>" class="btn btn-sm btn-outline rounded-xl">
                                         Đọc thêm
                                     </a>
                                 </div>
@@ -147,11 +179,11 @@ if (!function_exists('clientImageExists')) {
                 </div>
 
                 <?php if (($totalPages ?? 1) > 1): ?>
-                    <div class="flex justify-center mt-10">
+                    <div class="flex justify-center mt-10 overflow-x-auto">
                         <div class="join">
                             <?php for ($i = 1; $i <= $totalPages; $i++): ?>
                                 <a href="<?= postPageUrl($filters ?? [], $i) ?>"
-                                    class="join-item btn <?= (int)($page ?? 1) === $i ? 'bg-green-500 text-white border-green-500' : '' ?>">
+                                    class="join-item btn <?= (int)($page ?? 1) === $i ? 'site-primary-bg text-white border-0' : '' ?>">
                                     <?= $i ?>
                                 </a>
                             <?php endfor; ?>
@@ -178,8 +210,11 @@ if (!function_exists('clientImageExists')) {
                     <?php if (!empty($randomPosts)): ?>
                         <div class="space-y-4">
                             <?php foreach ($randomPosts as $randomPost): ?>
-                                <a href="index.php?area=client&controller=post&action=detail&slug=<?= urlencode($randomPost['slug']) ?>"
-                                    class="flex gap-3 group">
+                                <?php
+                                $randomPostUrl = 'index.php?area=client&controller=post&action=detail&slug=' . urlencode($randomPost['slug']);
+                                ?>
+
+                                <a href="<?= $randomPostUrl ?>" class="flex gap-3 group">
                                     <div class="w-20 h-20 rounded-2xl bg-orange-50 overflow-hidden shrink-0">
                                         <?php if (clientImageExists($randomPost['thumbnail'] ?? '')): ?>
                                             <img src="<?= htmlspecialchars($randomPost['thumbnail']) ?>"
@@ -207,11 +242,13 @@ if (!function_exists('clientImageExists')) {
                     <?php endif; ?>
                 </div>
 
-                <div class="rounded-3xl bg-gradient-to-br from-green-500 to-lime-500 text-white p-6">
+                <div class="rounded-3xl site-gradient-bg text-white p-6">
                     <div class="text-5xl mb-4">🍊</div>
-                    <h3 class="text-2xl font-extrabold">Mẹo nhỏ mỗi ngày</h3>
+                    <h3 class="text-2xl font-extrabold">
+                        <?= htmlspecialchars($settings['post_sidebar_title'] ?? 'Mẹo nhỏ mỗi ngày') ?>
+                    </h3>
                     <p class="text-white/80 mt-3 leading-7">
-                        Chọn trái cây theo mùa sẽ ngon hơn, rẻ hơn và giữ được độ tươi lâu hơn.
+                        <?= htmlspecialchars($settings['post_sidebar_content'] ?? 'Chọn trái cây theo mùa sẽ ngon hơn, rẻ hơn và giữ được độ tươi lâu hơn.') ?>
                     </p>
                 </div>
             </div>

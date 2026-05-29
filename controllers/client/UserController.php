@@ -2,53 +2,61 @@
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/log.php';
+
 require_once __DIR__ . '/../../models/User.php';
 require_once __DIR__ . '/../../models/Order.php';
 require_once __DIR__ . '/../../models/WebSetting.php';
-
-require_once __DIR__ . '/../../helpers/auth.php';
-require_once __DIR__ . '/../../helpers/upload.php';
-require_once __DIR__ . '/../../helpers/log.php';
+require_once __DIR__ . '/../../models/Cart.php';
 
 class ClientUserController extends BaseController
 {
     protected $folder = 'pages';
 
+    private function getDashboardData($errors = [], $old = [])
+    {
+        $userModel = new User();
+        $orderModel = new Order();
+        $settingModel = new WebSetting();
+        $cartModel = new Cart();
+
+        $userId = currentUserId();
+
+        $user = $userModel->findById($userId);
+
+        if (!$user) {
+            $user = currentUser();
+        }
+
+        $orders = $orderModel->getByUserId($userId);
+        $currentOrders = $orderModel->getCurrentByUserId($userId);
+
+        return [
+            'title' => 'Tài khoản của tôi',
+            'settings' => $settingModel->getSimpleSettings(),
+
+            'user' => $user,
+            'orders' => $orders,
+            'currentOrders' => $currentOrders,
+
+            'errors' => $errors,
+            'old' => $old,
+
+            'activeTab' => $_GET['tab'] ?? 'overview',
+
+            'cartTotalQuantity' => $cartModel->getTotalQuantity(),
+            'cartTotalAmount' => $cartModel->getTotalAmount(),
+        ];
+    }
+
     public function profile()
     {
         requireLogin();
 
-        $userModel = new User();
-        $orderModel = new Order();
-        $settingModel = new WebSetting();
+        createLog('view_user_dashboard');
 
-        $user = $userModel->find(currentUserId());
-        $orders = $orderModel->getByUserId(currentUserId());
-        $settings = $settingModel->getSimpleSettings();
-
-        $this->render('profile', [
-            'title' => 'Thông tin tài khoản',
-            'user' => $user,
-            'orders' => $orders,
-            'settings' => $settings,
-        ]);
-    }
-
-    public function editProfile()
-    {
-        requireLogin();
-
-        $userModel = new User();
-        $settingModel = new WebSetting();
-
-        $user = $userModel->find(currentUserId());
-        $settings = $settingModel->getSimpleSettings();
-
-        $this->render('editProfile', [
-            'title' => 'Cập nhật thông tin',
-            'user' => $user,
-            'settings' => $settings,
-        ]);
+        $this->render('userDashboard', $this->getDashboardData());
     }
 
     public function updateProfile()
@@ -56,16 +64,7 @@ class ClientUserController extends BaseController
         requireLogin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: index.php?area=client&controller=user&action=editProfile');
-            exit;
-        }
-
-        $userModel = new User();
-
-        $oldUser = $userModel->find(currentUserId());
-
-        if (!$oldUser) {
-            header('Location: index.php?area=client&controller=pages&action=error');
+            header('Location: index.php?area=client&controller=user&action=profile&tab=profile');
             exit;
         }
 
@@ -73,37 +72,43 @@ class ClientUserController extends BaseController
         $phone = trim($_POST['phone'] ?? '');
         $address = trim($_POST['address'] ?? '');
 
+        $errors = [];
+
         if ($name === '') {
-            $this->render('editProfile', [
-                'title' => 'Cập nhật thông tin',
-                'user' => $oldUser,
-                'errors' => [
-                    'name' => 'Tên không được để trống',
-                ],
-            ]);
+            $errors['name'] = 'Tên không được để trống.';
+        } elseif (mb_strlen($name) < 2) {
+            $errors['name'] = 'Tên tối thiểu 2 ký tự.';
+        }
+
+        if ($phone !== '' && !preg_match('/^(0|\+84)[0-9]{9,10}$/', $phone)) {
+            $errors['phone'] = 'Số điện thoại không hợp lệ.';
+        }
+
+        if (!empty($errors)) {
+            $_GET['tab'] = 'profile';
+
+            $this->render('userDashboard', $this->getDashboardData($errors, $_POST));
             return;
         }
 
-        $avatar = $oldUser['avatar'];
-
-        $newAvatar = uploadImage($_FILES['avatar'] ?? null, 'users');
-
-        if ($newAvatar) {
-            $avatar = $newAvatar;
-        }
+        $userModel = new User();
 
         $userModel->updateProfile(currentUserId(), [
             'name' => $name,
             'phone' => $phone,
             'address' => $address,
-            'avatar' => $avatar,
         ]);
 
         $_SESSION['user']['name'] = $name;
 
-        createLog('update_profile');
+        createLog('update_user_profile');
 
-        header('Location: index.php?area=client&controller=user&action=profile');
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => 'Đã cập nhật thông tin tài khoản.',
+        ];
+
+        header('Location: index.php?area=client&controller=user&action=profile&tab=profile');
         exit;
     }
 
@@ -112,38 +117,48 @@ class ClientUserController extends BaseController
         requireLogin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: index.php?area=client&controller=user&action=profile');
+            header('Location: index.php?area=client&controller=user&action=profile&tab=security');
             exit;
         }
 
-        $oldPassword = $_POST['old_password'] ?? '';
+        $currentPassword = $_POST['current_password'] ?? '';
         $newPassword = $_POST['new_password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
 
+        $errors = [];
+
         $userModel = new User();
+        $user = $userModel->findById(currentUserId());
 
-        $user = $userModel->find(currentUserId());
-
-        if (!$user || !password_verify($oldPassword, $user['password_hash'])) {
-            die('Mật khẩu cũ không đúng');
+        if (!$user || !password_verify($currentPassword, $user['password_hash'])) {
+            $errors['current_password'] = 'Mật khẩu hiện tại không đúng.';
         }
 
         if (strlen($newPassword) < 6) {
-            die('Mật khẩu mới phải có ít nhất 6 ký tự');
+            $errors['new_password'] = 'Mật khẩu mới tối thiểu 6 ký tự.';
         }
 
         if ($newPassword !== $confirmPassword) {
-            die('Mật khẩu xác nhận không khớp');
+            $errors['confirm_password'] = 'Mật khẩu nhập lại không khớp.';
         }
 
-        $userModel->updatePassword(
-            currentUserId(),
-            password_hash($newPassword, PASSWORD_DEFAULT)
-        );
+        if (!empty($errors)) {
+            $_GET['tab'] = 'security';
 
-        createLog('change_password');
+            $this->render('userDashboard', $this->getDashboardData($errors, $_POST));
+            return;
+        }
 
-        header('Location: index.php?area=client&controller=user&action=profile');
+        $userModel->updatePassword(currentUserId(), password_hash($newPassword, PASSWORD_DEFAULT));
+
+        createLog('change_user_password');
+
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => 'Đã đổi mật khẩu.',
+        ];
+
+        header('Location: index.php?area=client&controller=user&action=profile&tab=security');
         exit;
     }
 }
