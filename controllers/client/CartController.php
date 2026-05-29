@@ -16,17 +16,15 @@ class ClientCartController extends BaseController
         $cartModel = new Cart();
         $settingModel = new WebSetting();
 
-        $cartItems = $cartModel->getItems();
-        $totalAmount = $cartModel->getTotalAmount();
-        $totalQuantity = $cartModel->getTotalQuantity();
-        $settings = $settingModel->getSimpleSettings();
-
         $this->render('cart', [
             'title' => 'Giỏ hàng',
-            'cartItems' => $cartItems,
-            'totalAmount' => $totalAmount,
-            'totalQuantity' => $totalQuantity,
-            'settings' => $settings,
+            'settings' => $settingModel->getSimpleSettings(),
+
+            'cartItems' => $cartModel->getItems(),
+            'totalAmount' => $cartModel->getTotalAmount(),
+
+            'cartTotalQuantity' => $cartModel->getTotalQuantity(),
+            'cartTotalAmount' => $cartModel->getTotalAmount(),
         ]);
     }
 
@@ -38,18 +36,23 @@ class ClientCartController extends BaseController
         }
 
         $productId = $_POST['product_id'] ?? null;
-        $quantity = (int)($_POST['quantity'] ?? 1);
-
-        if (!$productId || $quantity <= 0) {
-            header('Location: index.php?area=client&controller=product&action=index');
-            exit;
-        }
+        $quantity = $_POST['quantity'] ?? 1;
 
         $cartModel = new Cart();
 
-        $cartModel->add($productId, $quantity);
+        if ($cartModel->add($productId, $quantity)) {
+            createLog('add_to_cart_' . $productId);
 
-        createLog('add_to_cart');
+            $_SESSION['flash'] = [
+                'type' => 'success',
+                'message' => 'Đã thêm sản phẩm vào giỏ hàng.',
+            ];
+        } else {
+            $_SESSION['flash'] = [
+                'type' => 'error',
+                'message' => 'Không thể thêm sản phẩm vào giỏ hàng.',
+            ];
+        }
 
         header('Location: index.php?area=client&controller=cart&action=index');
         exit;
@@ -63,13 +66,17 @@ class ClientCartController extends BaseController
         }
 
         $productId = $_POST['product_id'] ?? null;
-        $quantity = (int)($_POST['quantity'] ?? 1);
+        $quantity = $_POST['quantity'] ?? 1;
 
         $cartModel = new Cart();
+        $cartModel->update($productId, $quantity);
 
-        if ($productId) {
-            $cartModel->update($productId, $quantity);
-        }
+        createLog('update_cart_' . $productId);
+
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => 'Đã cập nhật giỏ hàng.',
+        ];
 
         header('Location: index.php?area=client&controller=cart&action=index');
         exit;
@@ -77,13 +84,17 @@ class ClientCartController extends BaseController
 
     public function remove()
     {
-        $productId = $_GET['product_id'] ?? null;
+        $productId = $_GET['product_id'] ?? ($_GET['id'] ?? null);
 
         $cartModel = new Cart();
+        $cartModel->remove($productId);
 
-        if ($productId) {
-            $cartModel->remove($productId);
-        }
+        createLog('remove_cart_item_' . $productId);
+
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => 'Đã xóa sản phẩm khỏi giỏ hàng.',
+        ];
 
         header('Location: index.php?area=client&controller=cart&action=index');
         exit;
@@ -92,8 +103,14 @@ class ClientCartController extends BaseController
     public function clear()
     {
         $cartModel = new Cart();
-
         $cartModel->clear();
+
+        createLog('clear_cart');
+
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => 'Đã xóa toàn bộ giỏ hàng.',
+        ];
 
         header('Location: index.php?area=client&controller=cart&action=index');
         exit;

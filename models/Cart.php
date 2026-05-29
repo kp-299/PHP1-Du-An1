@@ -1,87 +1,61 @@
 <?php
 
-/**
- * FILE: models/Cart.php
- * CHỨC NĂNG: Model xử lý giỏ hàng bằng session
- */
-
 require_once __DIR__ . '/Product.php';
 
 class Cart
 {
-    public function getItems()
+    private string $sessionKey = 'cart';
+
+    public function __construct()
     {
-        return $_SESSION['cart'] ?? [];
+        if (!isset($_SESSION[$this->sessionKey])) {
+            $_SESSION[$this->sessionKey] = [];
+        }
     }
 
     public function add($productId, $quantity = 1)
     {
-        $productId = (int) $productId;
-        $quantity = (int) $quantity;
+        $productId = (int)$productId;
+        $quantity = max(1, (int)$quantity);
 
-        if ($productId <= 0 || $quantity <= 0) {
+        if ($productId <= 0) {
             return false;
         }
 
-        if (!isset($_SESSION['cart'])) {
-            $_SESSION['cart'] = [];
+        if (isset($_SESSION[$this->sessionKey][$productId])) {
+            $_SESSION[$this->sessionKey][$productId] += $quantity;
+        } else {
+            $_SESSION[$this->sessionKey][$productId] = $quantity;
         }
-
-        $productModel = new Product();
-        $product = $productModel->find($productId);
-
-        if (!$product) {
-            return false;
-        }
-
-        if (isset($product['status']) && $product['status'] !== 'active') {
-            return false;
-        }
-
-        if (isset($_SESSION['cart'][$productId])) {
-            $_SESSION['cart'][$productId]['quantity'] += $quantity;
-            return true;
-        }
-
-        $_SESSION['cart'][$productId] = [
-            'id' => (int) $product['id'],
-            'name' => $product['name'],
-            'slug' => $product['slug'],
-            'price' => (float) $product['price'],
-            'sale_price' => $product['sale_price'] ?? null,
-            'unit' => $product['unit'] ?? 'kg',
-            'image' => $product['image'] ?? null,
-            'quantity' => $quantity,
-        ];
 
         return true;
     }
 
     public function update($productId, $quantity)
     {
-        $productId = (int) $productId;
-        $quantity = (int) $quantity;
+        $productId = (int)$productId;
+        $quantity = (int)$quantity;
 
-        if (!isset($_SESSION['cart'][$productId])) {
+        if ($productId <= 0) {
             return false;
         }
 
         if ($quantity <= 0) {
-            unset($_SESSION['cart'][$productId]);
+            unset($_SESSION[$this->sessionKey][$productId]);
             return true;
         }
 
-        $_SESSION['cart'][$productId]['quantity'] = $quantity;
+        $_SESSION[$this->sessionKey][$productId] = $quantity;
 
         return true;
     }
 
     public function remove($productId)
     {
-        $productId = (int) $productId;
+        $productId = (int)$productId;
 
-        if (isset($_SESSION['cart'][$productId])) {
-            unset($_SESSION['cart'][$productId]);
+        if (isset($_SESSION[$this->sessionKey][$productId])) {
+            unset($_SESSION[$this->sessionKey][$productId]);
         }
 
         return true;
@@ -89,41 +63,66 @@ class Cart
 
     public function clear()
     {
-        unset($_SESSION['cart']);
-
+        $_SESSION[$this->sessionKey] = [];
         return true;
+    }
+
+    public function isEmpty()
+    {
+        return empty($_SESSION[$this->sessionKey]);
+    }
+
+    public function getRawItems()
+    {
+        return $_SESSION[$this->sessionKey] ?? [];
+    }
+
+    public function getItems()
+    {
+        $cart = $this->getRawItems();
+
+        if (empty($cart)) {
+            return [];
+        }
+
+        $productModel = new Product();
+        $items = [];
+
+        foreach ($cart as $productId => $quantity) {
+            $product = $productModel->findById($productId);
+
+            if (!$product) {
+                unset($_SESSION[$this->sessionKey][$productId]);
+                continue;
+            }
+
+            $product['quantity'] = (int)$quantity;
+            $items[] = $product;
+        }
+
+        return $items;
     }
 
     public function getTotalQuantity()
     {
-        $total = 0;
-
-        foreach ($this->getItems() as $item) {
-            $total += (int) $item['quantity'];
-        }
-
-        return $total;
+        return array_sum($_SESSION[$this->sessionKey] ?? []);
     }
 
     public function getTotalAmount()
     {
+        $items = $this->getItems();
         $total = 0;
 
-        foreach ($this->getItems() as $item) {
-            $price = $item['price'];
+        foreach ($items as $item) {
+            $price = $item['price'] ?? 0;
 
             if (!empty($item['sale_price']) && $item['sale_price'] > 0) {
                 $price = $item['sale_price'];
             }
 
-            $total += (float) $price * (int) $item['quantity'];
+            $total += $price * ($item['quantity'] ?? 1);
         }
 
         return $total;
-    }
-
-    public function isEmpty()
-    {
-        return empty($this->getItems());
     }
 }

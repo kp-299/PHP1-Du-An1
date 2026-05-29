@@ -344,4 +344,174 @@ class Product extends BaseModel
 
         return (int) $result['total'];
     }
+
+    public function countFiltered($filters = [])
+    {
+        $sql = "SELECT COUNT(*) AS total
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.status = 'active'";
+
+        $params = [];
+
+        if (!empty($filters['keyword'])) {
+            $sql .= " AND p.name LIKE :keyword";
+            $params['keyword'] = '%' . $filters['keyword'] . '%';
+        }
+
+        if (!empty($filters['category_id'])) {
+            $sql .= " AND p.category_id = :category_id";
+            $params['category_id'] = $filters['category_id'];
+        }
+
+        if (!empty($filters['stock_filter'])) {
+            if ($filters['stock_filter'] === 'in_stock') {
+                $sql .= " AND p.stock > 0";
+            }
+
+            if ($filters['stock_filter'] === 'out_of_stock') {
+                $sql .= " AND p.stock <= 0";
+            }
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        $row = $stmt->fetch();
+
+        return (int) ($row['total'] ?? 0);
+    }
+
+    public function getClientProducts($filters = [])
+    {
+        $sql = "SELECT p.*, c.name AS category_name, c.slug AS category_slug
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.status = 'active'";
+
+        $params = [];
+
+        if (!empty($filters['keyword'])) {
+            $sql .= " AND p.name LIKE :keyword";
+            $params['keyword'] = '%' . $filters['keyword'] . '%';
+        }
+
+        if (!empty($filters['category_id'])) {
+            $sql .= " AND p.category_id = :category_id";
+            $params['category_id'] = $filters['category_id'];
+        }
+
+        if (!empty($filters['stock_filter'])) {
+            if ($filters['stock_filter'] === 'in_stock') {
+                $sql .= " AND p.stock > 0";
+            }
+
+            if ($filters['stock_filter'] === 'out_of_stock') {
+                $sql .= " AND p.stock <= 0";
+            }
+        }
+
+        $sort = $filters['sort'] ?? 'newest';
+
+        if ($sort === 'price_asc') {
+            $sql .= " ORDER BY COALESCE(NULLIF(p.sale_price, 0), p.price) ASC";
+        } elseif ($sort === 'price_desc') {
+            $sql .= " ORDER BY COALESCE(NULLIF(p.sale_price, 0), p.price) DESC";
+        } elseif ($sort === 'oldest') {
+            $sql .= " ORDER BY p.id ASC";
+        } else {
+            $sql .= " ORDER BY p.id DESC";
+        }
+
+        $sql .= " LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->db->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+
+        $stmt->bindValue(':limit', (int) ($filters['limit'] ?? 18), PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int) ($filters['offset'] ?? 0), PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    public function findDetailById($id)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT p.*, c.name AS category_name, c.slug AS category_slug
+         FROM products p
+         LEFT JOIN categories c ON p.category_id = c.id
+         WHERE p.id = :id
+         LIMIT 1"
+        );
+
+        $stmt->execute([
+            'id' => $id
+        ]);
+
+        return $stmt->fetch();
+    }
+
+    public function getRelatedProducts($categoryId, $exceptId, $limit = 12)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT p.*, c.name AS category_name, c.slug AS category_slug
+         FROM products p
+         LEFT JOIN categories c ON p.category_id = c.id
+         WHERE p.status = 'active'
+           AND p.category_id = :category_id
+           AND p.id != :id
+         ORDER BY p.id DESC
+         LIMIT :limit"
+        );
+
+        $stmt->bindValue(':category_id', (int) $categoryId, PDO::PARAM_INT);
+        $stmt->bindValue(':id', (int) $exceptId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    public function getImages($productId)
+    {
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT * FROM product_images
+             WHERE product_id = :product_id
+             ORDER BY id ASC"
+            );
+
+            $stmt->execute([
+                'product_id' => $productId
+            ]);
+
+            return $stmt->fetchAll();
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+
+    public function findById($id)
+    {
+        $sql = "
+        SELECT *
+        FROM products
+        WHERE id = :id
+        LIMIT 1
+    ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'id' => $id,
+        ]);
+
+        return $stmt->fetch();
+    }
 }

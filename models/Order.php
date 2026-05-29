@@ -19,29 +19,31 @@ class Order extends BaseModel
     public function create($data)
     {
         $sql = "
-            INSERT INTO orders (
-                user_id,
-                customer_name,
-                customer_phone,
-                customer_address,
-                total_amount,
-                note,
-                status,
-                payment_method,
-                payment_status
-            )
-            VALUES (
-                :user_id,
-                :customer_name,
-                :customer_phone,
-                :customer_address,
-                :total_amount,
-                :note,
-                :status,
-                :payment_method,
-                :payment_status
-            )
-        ";
+        INSERT INTO orders (
+            user_id,
+            customer_name,
+            customer_phone,
+            customer_email,
+            customer_address,
+            total_amount,
+            note,
+            status,
+            payment_method,
+            payment_status
+        )
+        VALUES (
+            :user_id,
+            :customer_name,
+            :customer_phone,
+            :customer_email,
+            :customer_address,
+            :total_amount,
+            :note,
+            :status,
+            :payment_method,
+            :payment_status
+        )
+    ";
 
         $stmt = $this->db->prepare($sql);
 
@@ -49,6 +51,7 @@ class Order extends BaseModel
             'user_id' => $data['user_id'] ?? null,
             'customer_name' => $data['customer_name'],
             'customer_phone' => $data['customer_phone'],
+            'customer_email' => $data['customer_email'] ?? null,
             'customer_address' => $data['customer_address'],
             'total_amount' => $data['total_amount'],
             'note' => $data['note'] ?? null,
@@ -90,6 +93,7 @@ class Order extends BaseModel
                     OR o.customer_phone LIKE :keyword
                     OR u.name LIKE :keyword
                     OR u.email LIKE :keyword
+                    OR o.customer_email LIKE :keyword
                 )
             ";
 
@@ -284,5 +288,92 @@ class Order extends BaseModel
         $result = $stmt->fetch();
 
         return (int) $result['total'];
+    }
+
+    public function countFiltered($filters = [])
+    {
+        $sql = "
+        SELECT COUNT(*) AS total
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE 1 = 1
+    ";
+
+        $params = [];
+
+        if (!empty($filters['status'])) {
+            $sql .= " AND o.status = :status";
+            $params['status'] = $filters['status'];
+        }
+
+        if (!empty($filters['keyword'])) {
+            $sql .= "
+            AND (
+                o.customer_name LIKE :keyword
+                OR o.customer_phone LIKE :keyword
+                OR o.customer_email LIKE :keyword
+                OR u.name LIKE :keyword
+                OR u.email LIKE :keyword
+            )
+        ";
+
+            $params['keyword'] = '%' . $filters['keyword'] . '%';
+        }
+
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(o.created_at) >= :date_from";
+            $params['date_from'] = $filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(o.created_at) <= :date_to";
+            $params['date_to'] = $filters['date_to'];
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        $row = $stmt->fetch();
+
+        return (int)($row['total'] ?? 0);
+    }
+
+    public function findByUser($orderId, $userId)
+    {
+        $sql = "
+        SELECT *
+        FROM orders
+        WHERE id = :id
+        AND user_id = :user_id
+        LIMIT 1
+    ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'id' => $orderId,
+            'user_id' => $userId,
+        ]);
+
+        return $stmt->fetch();
+    }
+
+    public function getCurrentByUserId($userId)
+    {
+        $sql = "
+        SELECT *
+        FROM orders
+        WHERE user_id = :user_id
+        AND status IN ('pending', 'processing', 'shipping')
+        ORDER BY created_at DESC, id DESC
+    ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'user_id' => $userId,
+        ]);
+
+        return $stmt->fetchAll();
     }
 }

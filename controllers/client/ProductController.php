@@ -2,9 +2,13 @@
 
 require_once __DIR__ . '/../BaseController.php';
 
+require_once __DIR__ . '/../../helpers/log.php';
+
 require_once __DIR__ . '/../../models/Product.php';
 require_once __DIR__ . '/../../models/Category.php';
+require_once __DIR__ . '/../../models/Post.php';
 require_once __DIR__ . '/../../models/WebSetting.php';
+require_once __DIR__ . '/../../models/Cart.php';
 
 class ClientProductController extends BaseController
 {
@@ -12,62 +16,128 @@ class ClientProductController extends BaseController
 
     public function index()
     {
+        createLog('view_products_page');
+
         $productModel = new Product();
         $categoryModel = new Category();
+        $postModel = new Post();
         $settingModel = new WebSetting();
+        $cartModel = new Cart();
+
+        $settings = $settingModel->getSimpleSettings();
+        $categories = $categoryModel->getActive();
 
         $keyword = trim($_GET['keyword'] ?? '');
-        $categoryId = $_GET['category_id'] ?? '';
-        $categorySlug = $_GET['category'] ?? '';
-        $sort = $_GET['sort'] ?? 'newest';
+        $categorySlug = trim($_GET['category'] ?? '');
+        $stockFilter = trim($_GET['stock_filter'] ?? '');
+        $sort = trim($_GET['sort'] ?? 'newest');
 
-        $products = $productModel->getAll([
+        $categoryId = null;
+        $currentCategory = null;
+
+        if ($categorySlug !== '') {
+            $currentCategory = $categoryModel->findBySlug($categorySlug);
+
+            if ($currentCategory) {
+                $categoryId = $currentCategory['id'];
+            }
+        }
+
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $limit = 18;
+        $offset = ($page - 1) * $limit;
+
+        $filters = [
             'keyword' => $keyword,
             'category_id' => $categoryId,
-            'category_slug' => $categorySlug,
-            'status' => 'active',
+            'stock_filter' => $stockFilter,
             'sort' => $sort,
-        ]);
+            'limit' => $limit,
+            'offset' => $offset,
+        ];
 
-        $categories = $categoryModel->getActive();
-        $settings = $settingModel->getSimpleSettings();
+        $products = $productModel->getClientProducts($filters);
+        $totalProducts = $productModel->countFiltered($filters);
+        $totalPages = max(1, (int)ceil($totalProducts / $limit));
 
-        $this->render('product', [
+        $posts = $postModel->getPublished(6);
+
+        $this->render('products', [
             'title' => 'Sản phẩm',
-            'products' => $products,
-            'categories' => $categories,
             'settings' => $settings,
-            'keyword' => $keyword,
-            'categoryId' => $categoryId,
-            'categorySlug' => $categorySlug,
-            'sort' => $sort,
+
+            'categories' => $categories,
+            'currentCategory' => $currentCategory,
+
+            'products' => $products,
+            'posts' => $posts,
+
+            'filters' => [
+                'keyword' => $keyword,
+                'category' => $categorySlug,
+                'stock_filter' => $stockFilter,
+                'sort' => $sort,
+            ],
+
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalProducts' => $totalProducts,
+
+            'cartTotalQuantity' => $cartModel->getTotalQuantity(),
+            'cartTotalAmount' => $cartModel->getTotalAmount(),
         ]);
     }
 
     public function detail()
     {
-        $slug = $_GET['slug'] ?? '';
+        $id = $_GET['id'] ?? null;
 
-        if ($slug === '') {
-            header('Location: index.php?area=client&controller=pages&action=error');
+        if (!$id) {
+            createLog('view_product_detail_missing_id');
+
+            header('Location: index.php?area=client&controller=product&action=index');
             exit;
         }
 
         $productModel = new Product();
+        $categoryModel = new Category();
         $settingModel = new WebSetting();
+        $cartModel = new Cart();
 
-        $product = $productModel->findBySlug($slug);
         $settings = $settingModel->getSimpleSettings();
+        $categories = $categoryModel->getActive();
 
-        if (!$product || $product['status'] !== 'active') {
+        $product = $productModel->findDetailById($id);
+
+        if (!$product) {
+            createLog('view_product_detail_not_found');
+
             header('Location: index.php?area=client&controller=pages&action=error');
             exit;
         }
 
+        createLog('view_product_detail_' . $product['id']);
+
+        $productImages = $productModel->getImages($id);
+
+        $relatedProducts = $productModel->getRelatedProducts(
+            $product['category_id'],
+            $product['id'],
+            12
+        );
+
         $this->render('productDetail', [
             'title' => $product['name'],
-            'product' => $product,
             'settings' => $settings,
+
+            'categories' => $categories,
+
+            'product' => $product,
+            'productImages' => $productImages,
+            'relatedProducts' => $relatedProducts,
+
+            'cartTotalQuantity' => $cartModel->getTotalQuantity(),
+            'cartTotalAmount' => $cartModel->getTotalAmount(),
         ]);
     }
 }

@@ -79,45 +79,6 @@ class User extends BaseModel
         return $this->db->lastInsertId();
     }
 
-    public function updateProfile($id, $data)
-    {
-        $sql = "
-            UPDATE users
-            SET
-                name = :name,
-                phone = :phone,
-                address = :address,
-                avatar = :avatar
-            WHERE id = :id
-        ";
-
-        $stmt = $this->db->prepare($sql);
-
-        return $stmt->execute([
-            'id' => $id,
-            'name' => $data['name'],
-            'phone' => $data['phone'] ?? null,
-            'address' => $data['address'] ?? null,
-            'avatar' => $data['avatar'] ?? null,
-        ]);
-    }
-
-    public function updatePassword($id, $passwordHash)
-    {
-        $sql = "
-            UPDATE users
-            SET password_hash = :password_hash
-            WHERE id = :id
-        ";
-
-        $stmt = $this->db->prepare($sql);
-
-        return $stmt->execute([
-            'id' => $id,
-            'password_hash' => $passwordHash
-        ]);
-    }
-
     public function getAllUsers($filters = [])
     {
         $sql = "
@@ -238,5 +199,63 @@ class User extends BaseModel
         $result = $stmt->fetch();
 
         return (int) $result['total'];
+    }
+
+    public function findById($id)
+    {
+        $sql = "
+        SELECT *
+        FROM users
+        WHERE id = :id
+        LIMIT 1
+    ";
+
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->execute([
+            'id' => $id,
+        ]);
+
+        return $stmt->fetch();
+    }
+
+    public function updateProfile($id, $data)
+    {
+        $sql = "
+        UPDATE users
+        SET
+            name = :name,
+            phone = :phone,
+            address = :address,
+            updated_at = NOW()
+        WHERE id = :id
+    ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'name' => $data['name'],
+            'phone' => $data['phone'] ?? '',
+            'address' => $data['address'] ?? '',
+        ]);
+    }
+
+    public function updatePassword($id, $passwordHash)
+    {
+        $sql = "
+        UPDATE users
+        SET
+            password_hash = :password_hash,
+            updated_at = NOW()
+        WHERE id = :id
+    ";
+
+        $stmt = $this->db->prepare($sql);
+
+        return $stmt->execute([
+            'id' => $id,
+            'password_hash' => $passwordHash,
+        ]);
     }
 }

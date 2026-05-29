@@ -193,4 +193,64 @@ class Post extends BaseModel
 
         return $stmt->fetchAll();
     }
+
+    public function countFiltered($filters = [])
+    {
+        $sql = "SELECT COUNT(*) AS total FROM posts WHERE 1=1";
+        $params = [];
+
+        if (!empty($filters['status'])) {
+            $sql .= " AND status = :status";
+            $params['status'] = $filters['status'];
+        }
+
+        if (!empty($filters['keyword'])) {
+            $sql .= " AND (title LIKE :keyword OR summary LIKE :keyword OR content LIKE :keyword)";
+            $params['keyword'] = '%' . $filters['keyword'] . '%';
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        $row = $stmt->fetch();
+
+        return (int)($row['total'] ?? 0);
+    }
+
+    public function getRandom($limit = 5)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT p.*, u.name AS author_name
+         FROM posts p
+         LEFT JOIN users u ON p.author_id = u.id
+         WHERE p.status = 'published'
+         ORDER BY RAND()
+         LIMIT :limit"
+        );
+
+        $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    public function getRelated($exceptId, $limit = 6)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT p.*, u.name AS author_name
+         FROM posts p
+         LEFT JOIN users u ON p.author_id = u.id
+         WHERE p.status = 'published'
+           AND p.id != :id
+         ORDER BY p.id DESC
+         LIMIT :limit"
+        );
+
+        $stmt->bindValue(':id', (int) $exceptId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
 }

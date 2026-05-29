@@ -3,10 +3,8 @@
 require_once __DIR__ . '/../BaseController.php';
 
 require_once __DIR__ . '/../../helpers/auth.php';
-require_once __DIR__ . '/../../helpers/redirect.php';
 require_once __DIR__ . '/../../helpers/slug.php';
 require_once __DIR__ . '/../../helpers/upload.php';
-require_once __DIR__ . '/../../helpers/log.php';
 
 require_once __DIR__ . '/../../models/Video.php';
 
@@ -18,10 +16,16 @@ class AdminVideoController extends BaseController
 
         $videoModel = new Video();
 
+        $keyword = trim($_GET['keyword'] ?? '');
+        $videoType = trim($_GET['video_type'] ?? '');
+        $status = trim($_GET['status'] ?? '');
+
         $filters = [
-            'keyword' => $_GET['keyword'] ?? '',
-            'status' => $_GET['status'] ?? '',
-            'video_type' => $_GET['video_type'] ?? '',
+            'keyword' => $keyword,
+            'video_type' => $videoType,
+            'status' => $status,
+            'limit' => 100,
+            'offset' => 0,
         ];
 
         $videos = $videoModel->getAll($filters);
@@ -29,7 +33,11 @@ class AdminVideoController extends BaseController
         $this->renderAdmin('videos/index', [
             'title' => 'Quản lý video',
             'videos' => $videos,
-            'filters' => $filters,
+            'filters' => [
+                'keyword' => $keyword,
+                'video_type' => $videoType,
+                'status' => $status,
+            ],
         ]);
     }
 
@@ -39,8 +47,11 @@ class AdminVideoController extends BaseController
 
         $this->renderAdmin('videos/create', [
             'title' => 'Thêm video',
-            'old' => [],
             'errors' => [],
+            'old' => [
+                'video_type' => 'short',
+                'status' => 'draft',
+            ],
         ]);
     }
 
@@ -49,95 +60,122 @@ class AdminVideoController extends BaseController
         requireAdmin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirectAdmin('video', 'index');
+            header('Location: index.php?area=admin&controller=video&action=create');
+            exit;
         }
 
         $title = trim($_POST['title'] ?? '');
-        $videoType = $_POST['video_type'] ?? 'short';
-        $videoUrl = trim($_POST['video_url'] ?? '');
         $description = trim($_POST['description'] ?? '');
-        $duration = $_POST['duration'] ?? null;
-        $status = $_POST['status'] ?? 'draft';
+        $videoType = trim($_POST['video_type'] ?? 'short');
+        $videoUrl = trim($_POST['video_url'] ?? '');
+        $duration = trim($_POST['duration'] ?? '');
+        $status = trim($_POST['status'] ?? 'draft');
 
         $errors = [];
 
         if ($title === '') {
-            $errors['title'] = 'Tiêu đề video không được để trống';
+            $errors['title'] = 'Tiêu đề không được để trống';
         }
 
         if (!in_array($videoType, ['short', 'long'])) {
             $errors['video_type'] = 'Loại video không hợp lệ';
         }
 
-        $thumbnail = null;
-        $videoFile = null;
+        if (!in_array($status, ['draft', 'published', 'hidden'])) {
+            $errors['status'] = 'Trạng thái không hợp lệ';
+        }
+
+        if ($videoUrl === '') {
+            $errors['video_url'] = 'Vui lòng nhập link YouTube';
+        } elseif (!$this->isValidYoutubeUrl($videoUrl)) {
+            $errors['video_url'] = 'Link YouTube không hợp lệ';
+        }
+
+        $thumbnail = '';
 
         if (!empty($_FILES['thumbnail']['name'])) {
-            $thumbnail = uploadImage($_FILES['thumbnail'], 'videos/thumbnails');
+            $thumbnail = uploadImage($_FILES['thumbnail'], 'uploads/videos');
+
+            if (!$thumbnail) {
+                $errors['thumbnail'] = 'Upload thumbnail thất bại';
+            }
         }
+
+        /**
+         * Optional: vẫn cho upload video file nếu sau này cần.
+         * Nhưng flow chính bây giờ là video_url.
+         */
+        $videoFile = '';
 
         if (!empty($_FILES['video_file']['name'])) {
-            $videoFile = uploadVideo($_FILES['video_file'], 'videos/files');
-        }
+            $videoFile = uploadFile($_FILES['video_file'], 'uploads/videos', [
+                'mp4',
+                'webm',
+                'ogg',
+                'mov',
+            ]);
 
-        if ($videoFile === null && $videoUrl === '') {
-            $errors['video_file'] = 'Bạn cần upload video hoặc nhập URL video';
+            if (!$videoFile) {
+                $errors['video_file'] = 'Upload file video thất bại';
+            }
         }
 
         if (!empty($errors)) {
             $this->renderAdmin('videos/create', [
                 'title' => 'Thêm video',
-                'old' => $_POST,
                 'errors' => $errors,
+                'old' => $_POST,
             ]);
             return;
         }
 
         $videoModel = new Video();
 
+        $slug = createSlug($title);
+
+        if ($videoModel->findBySlug($slug)) {
+            $slug .= '-' . time();
+        }
+
         $videoModel->create([
             'title' => $title,
-            'slug' => createSlug($title),
-            'video_type' => $videoType,
-            'thumbnail' => $thumbnail,
-            'video_file' => $videoFile,
-            'video_url' => $videoUrl,
+            'slug' => $slug,
             'description' => $description,
-            'duration' => $duration !== '' ? $duration : null,
-            'author_id' => $_SESSION['user']['id'] ?? null,
+            'thumbnail' => $thumbnail,
+            'video_url' => $videoUrl,
+            'video_file' => $videoFile,
+            'video_type' => $videoType,
+            'duration' => $duration !== '' ? (int)$duration : null,
             'status' => $status,
+            'user_id' => $_SESSION['user']['id'] ?? null,
         ]);
-
-        createLog('create_video');
 
         $_SESSION['flash'] = [
             'type' => 'success',
             'message' => 'Thêm video thành công',
         ];
 
-        redirectAdmin('video', 'index');
+        header('Location: index.php?area=admin&controller=video&action=index');
+        exit;
     }
 
     public function edit()
     {
         requireAdmin();
 
-        $id = $_GET['id'] ?? null;
+        $id = (int)($_GET['id'] ?? 0);
 
-        if (!$id) {
-            redirectAdmin('video', 'index');
+        if ($id <= 0) {
+            header('Location: index.php?area=admin&controller=video&action=index');
+            exit;
         }
 
         $videoModel = new Video();
         $video = $videoModel->find($id);
 
         if (!$video) {
-            $_SESSION['flash'] = [
-                'type' => 'error',
-                'message' => 'Không tìm thấy video',
-            ];
-
-            redirectAdmin('video', 'index');
+            header('Location: index.php?area=admin&controller=video&action=index');
+            exit;
         }
 
         $this->renderAdmin('videos/edit', [
@@ -152,64 +190,90 @@ class AdminVideoController extends BaseController
         requireAdmin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirectAdmin('video', 'index');
+            header('Location: index.php?area=admin&controller=video&action=index');
+            exit;
         }
 
-        $id = $_POST['id'] ?? null;
+        $id = (int)($_POST['id'] ?? 0);
 
-        if (!$id) {
-            redirectAdmin('video', 'index');
+        if ($id <= 0) {
+            header('Location: index.php?area=admin&controller=video&action=index');
+            exit;
         }
 
         $videoModel = new Video();
         $video = $videoModel->find($id);
 
         if (!$video) {
-            redirectAdmin('video', 'index');
+            header('Location: index.php?area=admin&controller=video&action=index');
+            exit;
         }
 
         $title = trim($_POST['title'] ?? '');
-        $videoType = $_POST['video_type'] ?? 'short';
-        $videoUrl = trim($_POST['video_url'] ?? '');
         $description = trim($_POST['description'] ?? '');
-        $duration = $_POST['duration'] ?? null;
-        $status = $_POST['status'] ?? 'draft';
+        $videoType = trim($_POST['video_type'] ?? 'short');
+        $videoUrl = trim($_POST['video_url'] ?? '');
+        $duration = trim($_POST['duration'] ?? '');
+        $status = trim($_POST['status'] ?? 'draft');
 
         $errors = [];
 
         if ($title === '') {
-            $errors['title'] = 'Tiêu đề video không được để trống';
+            $errors['title'] = 'Tiêu đề không được để trống';
         }
 
         if (!in_array($videoType, ['short', 'long'])) {
             $errors['video_type'] = 'Loại video không hợp lệ';
         }
 
-        $thumbnail = $video['thumbnail'];
-        $videoFile = $video['video_file'];
+        if (!in_array($status, ['draft', 'published', 'hidden'])) {
+            $errors['status'] = 'Trạng thái không hợp lệ';
+        }
+
+        if ($videoUrl === '') {
+            $errors['video_url'] = 'Vui lòng nhập link YouTube';
+        } elseif (!$this->isValidYoutubeUrl($videoUrl)) {
+            $errors['video_url'] = 'Link YouTube không hợp lệ';
+        }
+
+        $thumbnail = $video['thumbnail'] ?? '';
 
         if (!empty($_FILES['thumbnail']['name'])) {
-            $newThumbnail = uploadImage($_FILES['thumbnail'], 'videos/thumbnails');
+            $newThumbnail = uploadImage($_FILES['thumbnail'], 'uploads/videos');
 
-            if ($newThumbnail) {
+            if (!$newThumbnail) {
+                $errors['thumbnail'] = 'Upload thumbnail thất bại';
+            } else {
                 $thumbnail = $newThumbnail;
             }
         }
 
-        if (!empty($_FILES['video_file']['name'])) {
-            $newVideoFile = uploadVideo($_FILES['video_file'], 'videos/files');
+        $videoFile = $video['video_file'] ?? '';
 
-            if ($newVideoFile) {
+        if (!empty($_FILES['video_file']['name'])) {
+            $newVideoFile = uploadFile($_FILES['video_file'], 'uploads/videos', [
+                'mp4',
+                'webm',
+                'ogg',
+                'mov',
+            ]);
+
+            if (!$newVideoFile) {
+                $errors['video_file'] = 'Upload file video thất bại';
+            } else {
                 $videoFile = $newVideoFile;
             }
         }
 
-        if ($videoFile === null && $videoUrl === '') {
-            $errors['video_file'] = 'Bạn cần upload video hoặc nhập URL video';
-        }
-
         if (!empty($errors)) {
-            $video = array_merge($video, $_POST);
+            $video['title'] = $title;
+            $video['description'] = $description;
+            $video['video_type'] = $videoType;
+            $video['video_url'] = $videoUrl;
+            $video['duration'] = $duration;
+            $video['status'] = $status;
+            $video['thumbnail'] = $thumbnail;
+            $video['video_file'] = $videoFile;
 
             $this->renderAdmin('videos/edit', [
                 'title' => 'Sửa video',
@@ -219,48 +283,56 @@ class AdminVideoController extends BaseController
             return;
         }
 
+        $slug = $video['slug'];
+
+        if ($title !== $video['title']) {
+            $slug = createSlug($title);
+
+            $existing = $videoModel->findBySlug($slug);
+
+            if ($existing && (int)$existing['id'] !== $id) {
+                $slug .= '-' . time();
+            }
+        }
+
         $videoModel->update($id, [
             'title' => $title,
-            'slug' => createSlug($title),
-            'video_type' => $videoType,
-            'thumbnail' => $thumbnail,
-            'video_file' => $videoFile,
-            'video_url' => $videoUrl,
+            'slug' => $slug,
             'description' => $description,
-            'duration' => $duration !== '' ? $duration : null,
+            'thumbnail' => $thumbnail,
+            'video_url' => $videoUrl,
+            'video_file' => $videoFile,
+            'video_type' => $videoType,
+            'duration' => $duration !== '' ? (int)$duration : null,
             'status' => $status,
         ]);
-
-        createLog('update_video');
 
         $_SESSION['flash'] = [
             'type' => 'success',
             'message' => 'Cập nhật video thành công',
         ];
 
-        redirectAdmin('video', 'index');
+        header('Location: index.php?area=admin&controller=video&action=index');
+        exit;
     }
 
     public function detail()
     {
         requireAdmin();
 
-        $slug = $_GET['slug'] ?? '';
+        $slug = trim($_GET['slug'] ?? '');
 
         if ($slug === '') {
-            redirectAdmin('video', 'index');
+            header('Location: index.php?area=admin&controller=video&action=index');
+            exit;
         }
 
         $videoModel = new Video();
         $video = $videoModel->findBySlug($slug);
 
         if (!$video) {
-            $_SESSION['flash'] = [
-                'type' => 'error',
-                'message' => 'Không tìm thấy video',
-            ];
-
-            redirectAdmin('video', 'index');
+            header('Location: index.php?area=admin&controller=video&action=index');
+            exit;
         }
 
         $this->renderAdmin('videos/detail', [
@@ -273,59 +345,58 @@ class AdminVideoController extends BaseController
     {
         requireAdmin();
 
-        $id = $_GET['id'] ?? null;
-
-        if ($id) {
-            $videoModel = new Video();
-            $videoModel->publish($id);
-            createLog('publish_video');
-        }
-
-        redirectAdmin('video', 'index');
+        $this->updateStatusByGetId('published');
     }
 
     public function hide()
     {
         requireAdmin();
 
-        $id = $_GET['id'] ?? null;
-
-        if ($id) {
-            $videoModel = new Video();
-            $videoModel->hide($id);
-            createLog('hide_video');
-        }
-
-        redirectAdmin('video', 'index');
+        $this->updateStatusByGetId('hidden');
     }
 
     public function draft()
     {
         requireAdmin();
 
-        $id = $_GET['id'] ?? null;
-
-        if ($id) {
-            $videoModel = new Video();
-            $videoModel->draft($id);
-            createLog('draft_video');
-        }
-
-        redirectAdmin('video', 'index');
+        $this->updateStatusByGetId('draft');
     }
 
     public function delete()
     {
         requireAdmin();
 
-        $id = $_GET['id'] ?? null;
+        $id = (int)($_GET['id'] ?? 0);
 
-        if ($id) {
+        if ($id > 0) {
             $videoModel = new Video();
             $videoModel->delete($id);
-            createLog('delete_video');
+
+            $_SESSION['flash'] = [
+                'type' => 'success',
+                'message' => 'Xóa video thành công',
+            ];
         }
 
-        redirectAdmin('video', 'index');
+        header('Location: index.php?area=admin&controller=video&action=index');
+        exit;
+    }
+
+    private function updateStatusByGetId($status)
+    {
+        $id = (int)($_GET['id'] ?? 0);
+
+        if ($id > 0) {
+            $videoModel = new Video();
+            $videoModel->updateStatus($id, $status);
+        }
+
+        header('Location: index.php?area=admin&controller=video&action=index');
+        exit;
+    }
+
+    private function isValidYoutubeUrl($url)
+    {
+        return preg_match('/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//', $url);
     }
 }

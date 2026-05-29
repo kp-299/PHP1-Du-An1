@@ -54,7 +54,6 @@ class ClientPagesController extends BaseController
 
         $this->render('home', [
             'title' => $settings['site_name'] ?? 'Trang chủ',
-
             'settings' => $settings,
 
             'categories' => $categories,
