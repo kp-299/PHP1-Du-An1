@@ -18,6 +18,7 @@ $pageMap = [
     'video' => 'Video',
     'setting' => 'Cài đặt website',
     'log' => 'Logs',
+    'contact' => 'Liên hệ',
 ];
 
 $pageTitle = $pageMap[$currentController] ?? 'Dashboard';

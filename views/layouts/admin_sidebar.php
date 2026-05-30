@@ -220,11 +220,6 @@ if (!function_exists('isOpenMenu')) {
                                 Danh sách đơn hàng
                             </a>
 
-                            <a href="index.php?area=admin&controller=payment&action=index"
-                                class="flex items-center gap-3 px-4 py-3 rounded-2xl transition <?= adminSubMenuClass('payment', 'index') ?>">
-                                <span class="text-lg shrink-0">💳</span>
-                                <span class="font-semibold truncate">Thanh toán</span>
-                            </a>
                         </div>
                     </details>
                 </div>
@@ -266,6 +261,18 @@ if (!function_exists('isOpenMenu')) {
                         class="flex items-center gap-3 px-4 py-3 rounded-2xl transition <?= adminSubMenuClass('log', 'index') ?>">
                         <span class="text-lg shrink-0">📜</span>
                         <span class="font-semibold truncate">Logs</span>
+                    </a>
+
+                    <a href="index.php?area=admin&controller=contact&action=index"
+                        class="flex items-center gap-3 px-4 py-3 rounded-2xl transition <?= adminSubMenuClass('contact', 'index') ?>">
+                        <span class="text-lg shrink-0">📩</span>
+                        <span class="font-semibold truncate">Liên hệ</span>
+                    </a>
+
+                    <a href="index.php?area=admin&controller=payment&action=index"
+                        class="flex items-center gap-3 px-4 py-3 rounded-2xl transition <?= adminSubMenuClass('payment', 'index') ?>">
+                        <span class="text-lg shrink-0">💳</span>
+                        <span class="font-semibold truncate">Thanh toán</span>
                     </a>
                 </div>
             </div>
