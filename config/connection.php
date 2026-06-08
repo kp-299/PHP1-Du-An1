@@ -52,7 +52,7 @@ define('DB_NAME', 'bcalhqzjhosting_ban_trai_cay');
 define('DB_USER', 'bcalhqzjhosting_ban_trai_cay');
 // TODO: Điền password database thật tại đây (hoặc dùng .env)
 // Đây là placeholder, cần sửa trước khi chạy!
-define('DB_PASS', '7D]b2%&8`^w}+2U');
+define('DB_PASS', 'jM*&zWt#5+P4vQ~');
 
 // ==================== CLASS DB ====================
 
@@ -80,7 +80,7 @@ class DB
                     DB_USER,
                     DB_PASS,
                     [
-                        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     ]
                 );
