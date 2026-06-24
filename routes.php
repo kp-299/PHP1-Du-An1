@@ -5,7 +5,7 @@ $routes = [
         'pages' => [
             'file' => __DIR__ . '/controllers/client/PagesController.php',
             'class' => 'ClientPagesController',
-            'actions' => ['home', 'contact', 'error']
+            'actions' => ['home', 'contact', 'handleContact', 'error']
         ],
 
         'auth' => [
@@ -163,6 +163,12 @@ $routes = [
                 'updateBanners',
                 'removeBanner',
             ]
+        ],
+
+        'contact' => [
+            'file' => __DIR__ . '/controllers/admin/ContactController.php',
+            'class' => 'AdminContactController',
+            'actions' => ['index', 'detail', 'updateStatus', 'updateNote', 'delete']
         ],
     ],
 ];
