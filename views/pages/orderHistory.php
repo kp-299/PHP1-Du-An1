@@ -53,199 +53,207 @@ function orderHistoryPaymentMethodLabel($method)
         default => 'Khác',
     };
 }
+
+$totalOrders = count($orders);
+$currentOrderCount = count(array_filter($orders, fn($order) => in_array($order['status'] ?? '', ['pending', 'processing', 'shipping'], true)));
+$completedOrderCount = count(array_filter($orders, fn($order) => ($order['status'] ?? '') === 'completed'));
 ?>
 
-<section class="max-w-7xl mx-auto px-3 sm:px-4 py-8 sm:py-12">
-    <div class="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-            <p class="text-sm text-slate-500">Fresh Fruit Store</p>
-
-            <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-950">
-                Lịch sử đơn hàng
-            </h1>
-
-            <p class="text-slate-500 mt-2">
-                Theo dõi toàn bộ đơn hàng đã đặt, trạng thái xử lý và thanh toán.
-            </p>
-        </div>
-
-        <div class="flex flex-wrap gap-3">
-            <a href="index.php?area=client&controller=user&action=profile&tab=current_orders"
-                class="btn btn-outline rounded-2xl">
-                Đơn hiện tại
-            </a>
-
-            <a href="index.php?area=client&controller=user&action=profile&tab=overview"
-                class="btn bg-slate-900 hover:bg-slate-800 border-0 text-white rounded-2xl">
-                User Dashboard
-            </a>
-        </div>
-    </div>
-
-    <?php if (!empty($_SESSION['flash'])): ?>
-        <div
-            class="alert <?= $_SESSION['flash']['type'] === 'success' ? 'alert-success' : 'alert-error' ?> rounded-3xl mb-6">
-            <span><?= htmlspecialchars($_SESSION['flash']['message']) ?></span>
-        </div>
-        <?php unset($_SESSION['flash']); ?>
-    <?php endif; ?>
-
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="bg-white border border-slate-200 rounded-[2rem] p-5 shadow-sm">
-            <p class="text-slate-500">Tổng đơn</p>
-            <p class="text-3xl font-extrabold mt-3">
-                <?= count($orders) ?>
-            </p>
-        </div>
-
-        <div class="bg-white border border-slate-200 rounded-[2rem] p-5 shadow-sm">
-            <p class="text-slate-500">Đang xử lý</p>
-            <p class="text-3xl font-extrabold mt-3 text-amber-600">
-                <?= count(array_filter($orders, fn($order) => in_array($order['status'] ?? '', ['pending', 'processing', 'shipping'], true))) ?>
-            </p>
-        </div>
-
-        <div class="bg-white border border-slate-200 rounded-[2rem] p-5 shadow-sm">
-            <p class="text-slate-500">Đã hoàn thành</p>
-            <p class="text-3xl font-extrabold mt-3 text-green-600">
-                <?= count(array_filter($orders, fn($order) => ($order['status'] ?? '') === 'completed')) ?>
-            </p>
-        </div>
-    </div>
-
-    <div class="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
-        <div
-            class="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+<section class="client-section bg-slate-50">
+    <div class="client-shell">
+        <div class="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-                <h2 class="text-2xl font-extrabold text-slate-950">
-                    Danh sách đơn hàng
-                </h2>
+                <span class="client-badge mb-3">
+                    Orders
+                </span>
 
-                <p class="text-sm text-slate-500 mt-1">
-                    Các đơn hàng được tạo từ tài khoản của bạn.
+                <h1 class="client-section-title">
+                    Lịch sử đơn hàng
+                </h1>
+
+                <p class="client-section-subtitle">
+                    Theo dõi toàn bộ đơn hàng đã đặt, trạng thái xử lý và thanh toán.
                 </p>
             </div>
 
-            <span class="w-fit px-4 py-2 rounded-2xl bg-slate-900 text-white text-sm font-bold">
-                <?= count($orders) ?> đơn hàng
-            </span>
+            <div class="flex flex-wrap gap-3">
+                <a href="index.php?area=client&controller=user&action=profile&tab=current_orders"
+                    class="client-btn-outline h-11 px-5">
+                    Đơn hiện tại
+                </a>
+
+                <a href="index.php?area=client&controller=user&action=profile&tab=overview"
+                    class="client-btn-primary h-11 px-5">
+                    User Dashboard
+                </a>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="table min-w-[980px]">
-                <thead>
-                    <tr class="text-slate-500">
-                        <th>Mã đơn</th>
-                        <th>Người nhận</th>
-                        <th>Liên hệ</th>
-                        <th>Tổng tiền</th>
-                        <th>Hình thức</th>
-                        <th>Thanh toán</th>
-                        <th>Trạng thái</th>
-                        <th>Ngày tạo</th>
-                        <th class="text-right">Hành động</th>
-                    </tr>
-                </thead>
+        <?php if (!empty($_SESSION['flash'])): ?>
+            <div
+                class="alert <?= $_SESSION['flash']['type'] === 'success' ? 'alert-success' : 'alert-error' ?> rounded-3xl mb-6">
+                <span><?= htmlspecialchars($_SESSION['flash']['message']) ?></span>
+            </div>
+            <?php unset($_SESSION['flash']); ?>
+        <?php endif; ?>
 
-                <tbody>
-                    <?php if (!empty($orders)): ?>
-                        <?php foreach ($orders as $order): ?>
-                            <tr>
-                                <td class="font-extrabold">
-                                    #<?= htmlspecialchars($order['id'] ?? '') ?>
-                                </td>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="client-card p-5">
+                <p class="text-slate-500">Tổng đơn</p>
+                <p class="text-3xl font-extrabold mt-3 text-slate-950">
+                    <?= htmlspecialchars($totalOrders) ?>
+                </p>
+            </div>
 
-                                <td>
-                                    <div class="font-bold text-slate-950">
-                                        <?= htmlspecialchars($order['customer_name'] ?? '-') ?>
-                                    </div>
+            <div class="client-card p-5">
+                <p class="text-slate-500">Đang xử lý</p>
+                <p class="text-3xl font-extrabold mt-3 text-amber-600">
+                    <?= htmlspecialchars($currentOrderCount) ?>
+                </p>
+            </div>
 
-                                    <div class="text-xs text-slate-500 max-w-48 truncate">
-                                        <?= htmlspecialchars($order['customer_address'] ?? '-') ?>
-                                    </div>
-                                </td>
+            <div class="client-card p-5">
+                <p class="text-slate-500">Đã hoàn thành</p>
+                <p class="text-3xl font-extrabold mt-3 text-green-700">
+                    <?= htmlspecialchars($completedOrderCount) ?>
+                </p>
+            </div>
+        </div>
 
-                                <td>
-                                    <div class="text-sm font-semibold">
-                                        <?= htmlspecialchars($order['customer_phone'] ?? '-') ?>
-                                    </div>
+        <div class="client-card overflow-hidden">
+            <div
+                class="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-slate-950">
+                        Danh sách đơn hàng
+                    </h2>
 
-                                    <div class="text-xs text-slate-500 max-w-48 truncate">
-                                        <?= htmlspecialchars($order['customer_email'] ?? '-') ?>
-                                    </div>
-                                </td>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Các đơn hàng được tạo từ tài khoản của bạn.
+                    </p>
+                </div>
 
-                                <td class="font-extrabold text-green-600 whitespace-nowrap">
-                                    <?= number_format($order['total_amount'] ?? 0) ?>đ
-                                </td>
+                <span class="w-fit px-4 py-2 rounded-full bg-slate-950 text-white text-sm font-bold">
+                    <?= htmlspecialchars($totalOrders) ?> đơn hàng
+                </span>
+            </div>
 
-                                <td>
-                                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
-                                        <?= orderHistoryPaymentMethodLabel($order['payment_method'] ?? '') ?>
-                                    </span>
-                                </td>
+            <div class="overflow-x-auto">
+                <table class="table min-w-[980px]">
+                    <thead>
+                        <tr class="text-slate-500">
+                            <th>Mã đơn</th>
+                            <th>Người nhận</th>
+                            <th>Liên hệ</th>
+                            <th>Tổng tiền</th>
+                            <th>Hình thức</th>
+                            <th>Thanh toán</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày tạo</th>
+                            <th class="text-right">Hành động</th>
+                        </tr>
+                    </thead>
 
-                                <td>
-                                    <span
-                                        class="px-3 py-1 rounded-full text-xs font-bold <?= orderHistoryPaymentClass($order['payment_status'] ?? '') ?>">
-                                        <?= orderHistoryPaymentLabel($order['payment_status'] ?? '') ?>
-                                    </span>
-                                </td>
+                    <tbody>
+                        <?php if (!empty($orders)): ?>
+                            <?php foreach ($orders as $order): ?>
+                                <tr>
+                                    <td class="font-extrabold text-slate-950">
+                                        #<?= htmlspecialchars($order['id'] ?? '') ?>
+                                    </td>
 
-                                <td>
-                                    <span
-                                        class="px-3 py-1 rounded-full text-xs font-bold <?= orderHistoryStatusClass($order['status'] ?? '') ?>">
-                                        <?= orderHistoryStatusLabel($order['status'] ?? '') ?>
-                                    </span>
-                                </td>
+                                    <td>
+                                        <div class="font-bold text-slate-950">
+                                            <?= htmlspecialchars($order['customer_name'] ?? '-') ?>
+                                        </div>
 
-                                <td class="text-sm text-slate-500 whitespace-nowrap">
-                                    <?= htmlspecialchars($order['created_at'] ?? '-') ?>
-                                </td>
+                                        <div class="text-xs text-slate-500 max-w-48 truncate">
+                                            <?= htmlspecialchars($order['customer_address'] ?? '-') ?>
+                                        </div>
+                                    </td>
 
-                                <td class="text-right whitespace-nowrap">
-                                    <a href="index.php?area=client&controller=order&action=detail&id=<?= urlencode($order['id']) ?>"
-                                        class="btn btn-sm bg-slate-900 hover:bg-slate-800 border-0 text-white rounded-2xl">
-                                        Chi tiết
-                                    </a>
+                                    <td>
+                                        <div class="text-sm font-semibold text-slate-950">
+                                            <?= htmlspecialchars($order['customer_phone'] ?? '-') ?>
+                                        </div>
 
-                                    <?php if (($order['status'] ?? '') === 'pending'): ?>
-                                        <a href="index.php?area=client&controller=order&action=cancel&id=<?= urlencode($order['id']) ?>"
-                                            class="btn btn-sm btn-error rounded-2xl"
-                                            onclick="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?')">
-                                            Hủy
+                                        <div class="text-xs text-slate-500 max-w-48 truncate">
+                                            <?= htmlspecialchars($order['customer_email'] ?? '-') ?>
+                                        </div>
+                                    </td>
+
+                                    <td class="font-extrabold text-green-700 whitespace-nowrap">
+                                        <?= number_format($order['total_amount'] ?? 0) ?>đ
+                                    </td>
+
+                                    <td>
+                                        <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                                            <?= orderHistoryPaymentMethodLabel($order['payment_method'] ?? '') ?>
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-bold <?= orderHistoryPaymentClass($order['payment_status'] ?? '') ?>">
+                                            <?= orderHistoryPaymentLabel($order['payment_status'] ?? '') ?>
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-bold <?= orderHistoryStatusClass($order['status'] ?? '') ?>">
+                                            <?= orderHistoryStatusLabel($order['status'] ?? '') ?>
+                                        </span>
+                                    </td>
+
+                                    <td class="text-sm text-slate-500 whitespace-nowrap">
+                                        <?= htmlspecialchars($order['created_at'] ?? '-') ?>
+                                    </td>
+
+                                    <td class="text-right whitespace-nowrap">
+                                        <a href="index.php?area=client&controller=order&action=detail&id=<?= urlencode($order['id']) ?>"
+                                            class="btn btn-sm bg-slate-950 hover:bg-slate-800 border-0 text-white rounded-full">
+                                            Chi tiết
                                         </a>
-                                    <?php endif; ?>
+
+                                        <?php if (($order['status'] ?? '') === 'pending'): ?>
+                                            <a href="index.php?area=client&controller=order&action=cancel&id=<?= urlencode($order['id']) ?>"
+                                                class="btn btn-sm btn-error rounded-full"
+                                                onclick="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?')">
+                                                Hủy
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="9">
+                                    <div class="py-16 text-center">
+                                        <div
+                                            class="w-20 h-20 rounded-3xl bg-green-50 flex items-center justify-center text-5xl mx-auto">
+                                            📦
+                                        </div>
+
+                                        <h3 class="text-2xl font-extrabold text-slate-950 mt-5">
+                                            Chưa có đơn hàng nào
+                                        </h3>
+
+                                        <p class="text-slate-500 mt-2">
+                                            Sau khi đặt hàng, đơn hàng của bạn sẽ xuất hiện ở đây.
+                                        </p>
+
+                                        <a href="index.php?area=client&controller=product&action=index"
+                                            class="client-btn-accent h-11 px-6 mt-6">
+                                            Mua sắm ngay
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="9">
-                                <div class="py-16 text-center">
-                                    <div
-                                        class="w-20 h-20 rounded-[2rem] bg-green-50 flex items-center justify-center text-5xl mx-auto">
-                                        📦
-                                    </div>
-
-                                    <h3 class="text-2xl font-extrabold text-slate-950 mt-5">
-                                        Chưa có đơn hàng nào
-                                    </h3>
-
-                                    <p class="text-slate-500 mt-2">
-                                        Sau khi đặt hàng, đơn hàng của bạn sẽ xuất hiện ở đây.
-                                    </p>
-
-                                    <a href="index.php?area=client&controller=product&action=index"
-                                        class="btn site-gradient-bg border-0 text-white rounded-2xl mt-6">
-                                        Mua sắm ngay
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </section>

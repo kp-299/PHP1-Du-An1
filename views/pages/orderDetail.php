@@ -58,111 +58,127 @@ function paymentMethodLabel($method)
         default => 'Không rõ',
     };
 }
+
+function orderDetailImageExists($path)
+{
+    if (empty($path)) {
+        return false;
+    }
+
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+        return true;
+    }
+
+    return file_exists(__DIR__ . '/../../' . ltrim($path, '/'));
+}
 ?>
 
-<section class="max-w-7xl mx-auto px-3 sm:px-4 py-8 sm:py-12">
-    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <p class="text-sm text-slate-500">Fresh Fruit Store</p>
+<section class="client-section bg-slate-50">
+    <div class="client-shell">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <span class="client-badge mb-3">
+                    Order Detail
+                </span>
 
-            <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-950">
-                Chi tiết đơn hàng #<?= htmlspecialchars($order['id'] ?? '') ?>
-            </h1>
+                <h1 class="client-section-title">
+                    Chi tiết đơn hàng #<?= htmlspecialchars($order['id'] ?? '') ?>
+                </h1>
 
-            <p class="text-slate-500 mt-2">
-                Theo dõi thông tin đơn hàng và trạng thái thanh toán.
-            </p>
+                <p class="client-section-subtitle">
+                    Theo dõi thông tin đơn hàng và trạng thái thanh toán.
+                </p>
+            </div>
+
+            <a href="index.php?area=client&controller=order&action=history" class="client-btn-outline h-11 px-5 w-fit">
+                ← Lịch sử đơn hàng
+            </a>
         </div>
 
-        <a href="index.php?area=client&controller=order&action=history" class="btn btn-outline rounded-2xl w-fit">
-            ← Lịch sử đơn hàng
-        </a>
-    </div>
-
-    <?php if (!empty($_SESSION['flash'])): ?>
+        <?php if (!empty($_SESSION['flash'])): ?>
         <div
             class="alert <?= $_SESSION['flash']['type'] === 'success' ? 'alert-success' : 'alert-error' ?> rounded-3xl mb-6">
             <span><?= htmlspecialchars($_SESSION['flash']['message']) ?></span>
         </div>
         <?php unset($_SESSION['flash']); ?>
-    <?php endif; ?>
+        <?php endif; ?>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-8 space-y-6">
-            <div class="bg-white border border-slate-200 rounded-[2rem] p-5 sm:p-6 shadow-sm">
-                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-                    <div>
-                        <h2 class="text-2xl font-extrabold text-slate-950">
-                            Thông tin đơn hàng
-                        </h2>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8 space-y-6">
+                <div class="client-card p-5 sm:p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-slate-950">
+                                Thông tin đơn hàng
+                            </h2>
 
-                        <p class="text-sm text-slate-500 mt-1">
-                            Ngày tạo: <?= htmlspecialchars($order['created_at'] ?? '-') ?>
-                        </p>
+                            <p class="text-sm text-slate-500 mt-1">
+                                Ngày tạo: <?= htmlspecialchars($order['created_at'] ?? '-') ?>
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <span
+                                class="px-3 py-1 rounded-full text-xs font-bold <?= orderStatusClass($order['status'] ?? '') ?>">
+                                <?= orderStatusLabel($order['status'] ?? '') ?>
+                            </span>
+
+                            <span
+                                class="px-3 py-1 rounded-full text-xs font-bold <?= paymentStatusClass($order['payment_status'] ?? '') ?>">
+                                <?= paymentStatusLabel($order['payment_status'] ?? '') ?>
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-2">
-                        <span
-                            class="px-3 py-1 rounded-full text-xs font-bold <?= orderStatusClass($order['status'] ?? '') ?>">
-                            <?= orderStatusLabel($order['status'] ?? '') ?>
-                        </span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <p class="text-sm text-slate-500">Người nhận</p>
+                            <p class="font-bold text-slate-950 mt-1">
+                                <?= htmlspecialchars($order['customer_name'] ?? '-') ?>
+                            </p>
+                        </div>
 
-                        <span
-                            class="px-3 py-1 rounded-full text-xs font-bold <?= paymentStatusClass($order['payment_status'] ?? '') ?>">
-                            <?= paymentStatusLabel($order['payment_status'] ?? '') ?>
-                        </span>
-                    </div>
-                </div>
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <p class="text-sm text-slate-500">Số điện thoại</p>
+                            <p class="font-bold text-slate-950 mt-1">
+                                <?= htmlspecialchars($order['customer_phone'] ?? '-') ?>
+                            </p>
+                        </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                        <p class="text-sm text-slate-500">Người nhận</p>
-                        <p class="font-bold text-slate-950 mt-1">
-                            <?= htmlspecialchars($order['customer_name'] ?? '-') ?>
-                        </p>
-                    </div>
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <p class="text-sm text-slate-500">Email</p>
+                            <p class="font-bold text-slate-950 mt-1 break-all">
+                                <?= htmlspecialchars($order['customer_email'] ?? '-') ?>
+                            </p>
+                        </div>
 
-                    <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                        <p class="text-sm text-slate-500">Số điện thoại</p>
-                        <p class="font-bold text-slate-950 mt-1">
-                            <?= htmlspecialchars($order['customer_phone'] ?? '-') ?>
-                        </p>
-                    </div>
+                        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <p class="text-sm text-slate-500">Hình thức thanh toán</p>
+                            <p class="font-bold text-slate-950 mt-1">
+                                <?= paymentMethodLabel($order['payment_method'] ?? '') ?>
+                            </p>
+                        </div>
 
-                    <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                        <p class="text-sm text-slate-500">Email</p>
-                        <p class="font-bold text-slate-950 mt-1 break-all">
-                            <?= htmlspecialchars($order['customer_email'] ?? '-') ?>
-                        </p>
-                    </div>
+                        <div class="md:col-span-2 rounded-3xl bg-slate-50 border border-slate-200 p-4">
+                            <p class="text-sm text-slate-500">Địa chỉ giao hàng</p>
+                            <p class="font-bold text-slate-950 mt-1">
+                                <?= htmlspecialchars($order['customer_address'] ?? '-') ?>
+                            </p>
+                        </div>
 
-                    <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                        <p class="text-sm text-slate-500">Hình thức thanh toán</p>
-                        <p class="font-bold text-slate-950 mt-1">
-                            <?= paymentMethodLabel($order['payment_method'] ?? '') ?>
-                        </p>
-                    </div>
-
-                    <div class="md:col-span-2 rounded-3xl bg-slate-50 border border-slate-200 p-4">
-                        <p class="text-sm text-slate-500">Địa chỉ giao hàng</p>
-                        <p class="font-bold text-slate-950 mt-1">
-                            <?= htmlspecialchars($order['customer_address'] ?? '-') ?>
-                        </p>
-                    </div>
-
-                    <?php if (!empty($order['note'])): ?>
+                        <?php if (!empty($order['note'])): ?>
                         <div class="md:col-span-2 rounded-3xl bg-slate-50 border border-slate-200 p-4">
                             <p class="text-sm text-slate-500">Ghi chú</p>
                             <p class="font-bold text-slate-950 mt-1">
                                 <?= nl2br(htmlspecialchars($order['note'])) ?>
                             </p>
                         </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
-            </div>
 
-            <?php if (($order['payment_method'] ?? '') === 'bank_qr' && ($order['payment_status'] ?? '') === 'unpaid'): ?>
-                <div class="bg-white border border-slate-200 rounded-[2rem] p-5 sm:p-6 shadow-sm">
+                <?php if (($order['payment_method'] ?? '') === 'bank_qr' && ($order['payment_status'] ?? '') === 'unpaid'): ?>
+                <div class="client-card p-5 sm:p-6">
                     <h2 class="text-2xl font-extrabold text-slate-950">
                         Thanh toán chuyển khoản
                     </h2>
@@ -174,11 +190,11 @@ function paymentMethodLabel($method)
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
                         <div
                             class="rounded-3xl bg-slate-50 border border-slate-200 min-h-64 flex items-center justify-center overflow-hidden">
-                            <?php if (!empty($paymentSettings['bank_qr_image'])): ?>
-                                <img src="<?= htmlspecialchars($paymentSettings['bank_qr_image']) ?>"
-                                    class="w-full h-full object-contain" alt="QR thanh toán">
+                            <?php if (orderDetailImageExists($paymentSettings['bank_qr_image'] ?? '')): ?>
+                            <img src="<?= htmlspecialchars($paymentSettings['bank_qr_image']) ?>"
+                                class="w-full h-full object-contain" alt="QR thanh toán">
                             <?php else: ?>
-                                <span class="text-slate-400">Chưa có QR</span>
+                            <span class="text-slate-400">Chưa có QR</span>
                             <?php endif; ?>
                         </div>
 
@@ -206,7 +222,7 @@ function paymentMethodLabel($method)
 
                             <div class="flex justify-between gap-4 border-b border-slate-200 pb-3">
                                 <span class="text-slate-500">Số tiền</span>
-                                <span class="font-bold text-right text-green-600">
+                                <span class="font-bold text-right text-green-700">
                                     <?= number_format($order['total_amount'] ?? 0) ?>đ
                                 </span>
                             </div>
@@ -226,11 +242,10 @@ function paymentMethodLabel($method)
                         </div>
                     </div>
                 </div>
-            <?php endif; ?>
+                <?php endif; ?>
 
-            <div class="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
-                <div class="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between gap-4">
-                    <div>
+                <div class="client-card overflow-hidden">
+                    <div class="p-5 sm:p-6 border-b border-slate-100">
                         <h2 class="text-2xl font-extrabold text-slate-950">
                             Sản phẩm đã đặt
                         </h2>
@@ -239,25 +254,24 @@ function paymentMethodLabel($method)
                             Danh sách sản phẩm trong đơn hàng.
                         </p>
                     </div>
-                </div>
 
-                <div class="overflow-x-auto">
-                    <table class="table min-w-[760px]">
-                        <thead>
-                            <tr>
-                                <th>Sản phẩm</th>
-                                <th>Đơn giá</th>
-                                <th>Số lượng</th>
-                                <th>Đơn vị</th>
-                                <th class="text-right">Thành tiền</th>
-                            </tr>
-                        </thead>
+                    <div class="overflow-x-auto">
+                        <table class="table min-w-[760px]">
+                            <thead>
+                                <tr>
+                                    <th>Sản phẩm</th>
+                                    <th>Đơn giá</th>
+                                    <th>Số lượng</th>
+                                    <th>Đơn vị</th>
+                                    <th class="text-right">Thành tiền</th>
+                                </tr>
+                            </thead>
 
-                        <tbody>
-                            <?php foreach ($orderItems as $item): ?>
+                            <tbody>
+                                <?php foreach ($orderItems as $item): ?>
                                 <tr>
                                     <td>
-                                        <div class="font-bold">
+                                        <div class="font-bold text-slate-950">
                                             <?= htmlspecialchars($item['product_name'] ?? '-') ?>
                                         </div>
                                     </td>
@@ -274,13 +288,13 @@ function paymentMethodLabel($method)
                                         <?= htmlspecialchars($item['unit'] ?? '-') ?>
                                     </td>
 
-                                    <td class="text-right font-bold">
+                                    <td class="text-right font-bold text-slate-950">
                                         <?= number_format($item['subtotal'] ?? 0) ?>đ
                                     </td>
                                 </tr>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
 
-                            <?php if (empty($orderItems)): ?>
+                                <?php if (empty($orderItems)): ?>
                                 <tr>
                                     <td colspan="5">
                                         <div class="text-center py-10 text-slate-500">
@@ -288,86 +302,85 @@ function paymentMethodLabel($method)
                                         </div>
                                     </td>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <aside class="lg:col-span-4">
-            <div class="lg:sticky lg:top-24 space-y-6">
-                <div class="bg-white border border-slate-200 rounded-[2rem] p-5 sm:p-6 shadow-sm">
-                    <h2 class="text-2xl font-extrabold text-slate-950">
-                        Tổng thanh toán
-                    </h2>
+            <aside class="lg:col-span-4">
+                <div class="lg:sticky lg:top-24 space-y-6">
+                    <div class="client-card p-5 sm:p-6">
+                        <h2 class="text-2xl font-extrabold text-slate-950">
+                            Tổng thanh toán
+                        </h2>
 
-                    <div class="space-y-3 mt-5">
-                        <div class="flex justify-between text-slate-500">
-                            <span>Tạm tính</span>
-                            <span><?= number_format($order['total_amount'] ?? 0) ?>đ</span>
+                        <div class="space-y-3 mt-5">
+                            <div class="flex justify-between text-slate-500">
+                                <span>Tạm tính</span>
+                                <span><?= number_format($order['total_amount'] ?? 0) ?>đ</span>
+                            </div>
+
+                            <div class="flex justify-between text-slate-500">
+                                <span>Phí giao hàng</span>
+                                <span>0đ</span>
+                            </div>
+
+                            <div
+                                class="flex justify-between text-xl font-extrabold text-slate-950 pt-3 border-t border-slate-200">
+                                <span>Tổng cộng</span>
+                                <span class="text-green-700">
+                                    <?= number_format($order['total_amount'] ?? 0) ?>đ
+                                </span>
+                            </div>
                         </div>
 
-                        <div class="flex justify-between text-slate-500">
-                            <span>Phí giao hàng</span>
-                            <span>0đ</span>
-                        </div>
-
-                        <div
-                            class="flex justify-between text-xl font-extrabold text-slate-950 pt-3 border-t border-slate-200">
-                            <span>Tổng cộng</span>
-                            <span class="text-green-600">
-                                <?= number_format($order['total_amount'] ?? 0) ?>đ
-                            </span>
-                        </div>
-                    </div>
-
-                    <?php if (($order['status'] ?? '') === 'pending'): ?>
+                        <?php if (($order['status'] ?? '') === 'pending'): ?>
                         <a href="index.php?area=client&controller=order&action=cancel&id=<?= urlencode($order['id']) ?>"
-                            class="btn btn-outline btn-error rounded-2xl w-full mt-6"
+                            class="h-12 px-5 rounded-full border border-rose-200 hover:bg-rose-50 text-rose-600 inline-flex items-center justify-center font-bold transition w-full mt-6"
                             onclick="return confirm('Bạn chắc chắn muốn hủy đơn hàng này?')">
                             Hủy đơn hàng
                         </a>
-                    <?php endif; ?>
+                        <?php endif; ?>
 
-                    <a href="index.php?area=client&controller=product&action=index"
-                        class="btn site-gradient-bg border-0 text-white rounded-2xl w-full mt-3">
-                        Tiếp tục mua hàng
-                    </a>
-                </div>
+                        <a href="index.php?area=client&controller=product&action=index"
+                            class="client-btn-accent h-12 px-5 w-full mt-3">
+                            Tiếp tục mua hàng
+                        </a>
+                    </div>
 
-                <div class="bg-white border border-slate-200 rounded-[2rem] p-5 sm:p-6 shadow-sm">
-                    <h3 class="text-xl font-extrabold text-slate-950">
-                        Trạng thái đơn hàng
-                    </h3>
+                    <div class="client-card p-5 sm:p-6">
+                        <h3 class="text-xl font-extrabold text-slate-950">
+                            Trạng thái đơn hàng
+                        </h3>
 
-                    <div class="mt-5 space-y-4">
-                        <?php
-                        $steps = [
-                            'pending' => 'Chờ xử lý',
-                            'processing' => 'Đang xử lý',
-                            'shipping' => 'Đang giao',
-                            'completed' => 'Hoàn thành',
-                        ];
-
-                        $currentStatus = $order['status'] ?? 'pending';
-                        $passed = true;
-                        ?>
-
-                        <?php foreach ($steps as $key => $label): ?>
+                        <div class="mt-5 space-y-4">
                             <?php
-                            $isCurrent = $currentStatus === $key;
-                            $isCancelled = $currentStatus === 'cancelled';
+                            $steps = [
+                                'pending' => 'Chờ xử lý',
+                                'processing' => 'Đang xử lý',
+                                'shipping' => 'Đang giao',
+                                'completed' => 'Hoàn thành',
+                            ];
 
-                            if ($isCurrent) {
-                                $passed = false;
-                            }
+                            $currentStatus = $order['status'] ?? 'pending';
+                            $passed = true;
                             ?>
+
+                            <?php foreach ($steps as $key => $label): ?>
+                            <?php
+                                $isCurrent = $currentStatus === $key;
+                                $isCancelled = $currentStatus === 'cancelled';
+
+                                if ($isCurrent) {
+                                    $passed = false;
+                                }
+                                ?>
 
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-                                    <?= (!$isCancelled && ($isCurrent || $passed)) ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-400' ?>">
+                                    class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold <?= (!$isCancelled && ($isCurrent || $passed)) ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-400' ?>">
                                     ✓
                                 </div>
 
@@ -375,16 +388,17 @@ function paymentMethodLabel($method)
                                     <?= htmlspecialchars($label) ?>
                                 </p>
                             </div>
-                        <?php endforeach; ?>
+                            <?php endforeach; ?>
 
-                        <?php if (($order['status'] ?? '') === 'cancelled'): ?>
+                            <?php if (($order['status'] ?? '') === 'cancelled'): ?>
                             <div class="alert alert-error rounded-3xl mt-4">
                                 <span>Đơn hàng đã được hủy.</span>
                             </div>
-                        <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </aside>
+            </aside>
+        </div>
     </div>
 </section>
